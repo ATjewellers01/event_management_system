@@ -1,7 +1,7 @@
 FROM node:20-alpine AS scanner-build
 WORKDIR /app/BotivateScanner
 COPY BotivateScanner/package*.json ./
-RUN npm ci
+RUN npm install
 COPY BotivateScanner/ ./
 RUN npm run build
 
