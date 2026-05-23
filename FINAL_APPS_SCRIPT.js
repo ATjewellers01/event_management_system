@@ -325,7 +325,7 @@ function saveEventData(eventData) {
 function getEventList() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName("Event Details");
-  if (!sheet) return { success: false, message: "Sheet 'Event Details' not found." };
+  if (!sheet) return { success: true, data: [] };
   
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return { success: true, data: [] };
@@ -667,16 +667,16 @@ function saveVisitorAndGetContact(visitorData) {
  */
 function getSheetData(SHEET_NAME) {
   if (!SHEET_NAME) SHEET_NAME = "Ai Card";
-  
+
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) throw new Error("Sheet not found: " + SHEET_NAME);
-  
+  if (!sheet) return { success: true, data: [] };
+
   const range = sheet.getDataRange();
   const values = range.getValues();
   const formulas = range.getFormulas();
-  
-  if (values.length < 2) return [];
+
+  if (values.length < 2) return { success: true, data: [] };
   
   const headers = values[0];
   const data = [];
