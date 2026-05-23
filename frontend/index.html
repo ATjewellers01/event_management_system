@@ -582,7 +582,7 @@
                     <h3 class="text-3xl font-bold text-gray-900 mb-2">Event Created ✅</h3>
                     <p class="text-gray-500 max-w-sm mx-auto mb-8">Your event has been successfully registered. Share the link or QR code with your team.</p>
                     <div class="qr-placeholder">
-                        <img id="generatedQR" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://ai-event.saloonmate.com/visitor-form/demo" alt="QR Code">
+                        <img id="generatedQR" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://event.zold.in/visitor-form/demo" alt="QR Code">
                     </div>
 
                     <div class="w-full max-w-md bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-10 flex items-center justify-between">
@@ -926,7 +926,7 @@
                 if (divider) divider.classList.add('hidden');
                 
                 // Generate Event Form QR
-                const eventFormUrl = `https://ai-event.saloonmate.com/visitor-form/${ev.id}`;
+                const eventFormUrl = `https://event.zold.in/visitor-form/${ev.id}`;
                 document.getElementById('displayQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(eventFormUrl)}`;
 
                 if (!isPopState) {
@@ -1305,6 +1305,7 @@
                     logoBase64: logoBase64 ? logoBase64.split(',')[1] : (prof.logoBase64 ? prof.logoBase64.split(',')[1] : null)
                 };
 
+                let res;
                 try {
                     const response = await fetch('/save-event', {
                         method: 'POST',
@@ -1312,13 +1313,13 @@
                         body: JSON.stringify({ eventData: eventData })
                     });
 
-                    const res = await response.json();
+                    res = await response.json();
                     
                     if (res.success) {
                         toastMe('Event Created Successfully!', '#10b981');
                         
                         // Update QR to point to Visitor Form
-                        const eventUrl = `https://ai-event.saloonmate.com/visitor-form/${res.eventId}`;
+                        const eventUrl = `https://event.zold.in/visitor-form/${res.eventId}`;
                         document.getElementById('generatedQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(eventUrl)}`;
                         document.getElementById('eventLinkText').innerText = eventUrl;
                         
