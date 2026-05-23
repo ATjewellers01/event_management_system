@@ -8,7 +8,7 @@ import jsPDF from "jspdf"
 // @ts-ignore - QRCode library doesn't have TypeScript definitions
 import QRCodeLib from "qrcode"
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzCPeTYr3DyfmQaEJCQ_A7KnKJ9gZtz4zO-chHkLyvxMFsCd2JRWikUB8LxpFwwbuczxw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpsxfh1cnAxh0IEhknQ_arnl_fRb9qXGXR3skbuu44ux_JYwFR-h6KZr9zZYCHHPjh/exec";
 
 interface ContactInfo {
   firstName: string
