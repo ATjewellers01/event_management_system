@@ -8,7 +8,11 @@ import jsPDF from "jspdf"
 // @ts-ignore - QRCode library doesn't have TypeScript definitions
 import QRCodeLib from "qrcode"
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpsxfh1cnAxh0IEhknQ_arnl_fRb9qXGXR3skbuu44ux_JYwFR-h6KZr9zZYCHHPjh/exec";
+// Read from Vite env at build time. Set VITE_APPS_SCRIPT_URL in
+// BotivateScanner/.env or pass --build-arg in Docker. Falls back to empty
+// string so missing config surfaces as a clear network error rather than
+// silently hitting an unrelated deployment.
+const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL || "";
 
 interface ContactInfo {
   firstName: string
@@ -190,22 +194,24 @@ function App() {
     if (id) {
       fetchEventData(id);
     } else {
+      // No event id in the URL — render an empty card. Real data populates
+      // when the user navigates from a scanned QR with a valid event id.
       setContactInfo({
-        firstName: "Satyendra",
-        lastName: "Tandan",
-        title: "Founder & CEO",
-        organization: "Botivate Services LLP",
-        phone: "8871527519",
-        email: "satyendra@botivate.in",
-        address: "Office No - 224, Shriram Business Park, Amaseoni, Vidhan Sabha Rd",
-        city: "Raipur",
-        state: "Chhattisgarh",
-        pincode: "493111",
-        country: "India",
-        website: "www.botivate.in",
-        logo: "images/Botivate.png",
-        industry: "Technology",
-        tagline: "Powering Businesses On Autopilot"
+        firstName: "",
+        lastName: "",
+        title: "",
+        organization: "",
+        phone: "",
+        email: "",
+        address: "",
+        city: "",
+        state: "",
+        pincode: "",
+        country: "",
+        website: "",
+        logo: "",
+        industry: "",
+        tagline: ""
       });
       setLoading(false);
     }
@@ -243,7 +249,7 @@ function App() {
         const d = res.data;
         const allKeys = Object.keys(d);
         const logoKey = allKeys.find(k => k.toLowerCase().includes('logo') || k.toLowerCase().includes('photo') || k.toLowerCase().includes('image'));
-        const rawLogo = logoKey ? d[logoKey] : "images/Botivate.png";
+        const rawLogo = logoKey ? d[logoKey] : "";
         const processedLogo = convertDriveLink(rawLogo);
         const finalLogo = wrapWithProxy(processedLogo);
         const eName = d["Event Name"] || "Unknown Event";
@@ -253,18 +259,18 @@ function App() {
           firstName: d["Member Name"] ? d["Member Name"].split(' ')[0] : (d["Event Name"] || "Event"),
           lastName: d["Member Name"] ? d["Member Name"].split(' ').slice(1).join(' ') : "",
           title: d["Designation"] || "Event Organizer",
-          organization: d["Company Name"] || "Botivate Services LLP",
-          phone: d["Member Phone"] || d["Official Phone"] || d["Mobile Number"] || "8871527519",
-          email: d["Official Email"] || "satyendra@botivate.in",
+          organization: d["Company Name"] || "",
+          phone: d["Member Phone"] || d["Official Phone"] || d["Mobile Number"] || "",
+          email: d["Official Email"] || "",
           address: d["Address Line"] || "",
-          city: d["City"] || "Raipur",
-          state: d["State"] || "Chhattisgarh",
-          pincode: d["Pincode"] || "493111",
-          country: d["Country"] || "India",
-          website: d["Website URL"] || d["Website"] || "www.botivate.in",
-          logo: finalLogo || "images/Botivate.png",
+          city: d["City"] || "",
+          state: d["State"] || "",
+          pincode: d["Pincode"] || "",
+          country: d["Country"] || "",
+          website: d["Website URL"] || d["Website"] || "",
+          logo: finalLogo || "",
           tagline: d["Tagline"] || "",
-          industry: d["Industry"] || "Technology",
+          industry: d["Industry"] || "",
           whatsapp: d["WhatsApp Number"] || "",
           linkedin: d["LinkedIn"] || "",
           instagram: d["Instagram"] || "",
@@ -567,6 +573,17 @@ END:VCARD`.trim()
            <h4 className="text-3xl font-black">{contactInfo.organization}</h4>
            <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">{contactInfo.tagline}</p>
         </div>
+        <p className="text-center text-[10px] font-extrabold uppercase tracking-[0.4em] text-slate-400 pt-2">
+          Powered by{' '}
+          <a
+            href="https://botivate.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            Botivate
+          </a>
+        </p>
       </div>
     </div>
   )

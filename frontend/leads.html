@@ -295,7 +295,18 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwpsxfh1cnAxh0IEhknQ_arnl_fRb9qXGXR3skbuu44ux_JYwFR-h6KZr9zZYCHHPjh/exec';
+        // Config loaded from the backend's /api/config endpoint so deployment
+        // URLs are not baked into source. Defaults keep the page usable if the
+        // fetch races a fast user action.
+        let APPS_SCRIPT_URL = '';
+        let PUBLIC_BASE_URL = window.location.origin;
+        const configReady = fetch('/api/config')
+            .then(r => r.json())
+            .then(cfg => {
+                APPS_SCRIPT_URL = cfg.appsScriptUrl || '';
+                PUBLIC_BASE_URL = (cfg.publicBaseUrl || window.location.origin).replace(/\/$/, '');
+            })
+            .catch(err => console.error('Failed to load /api/config', err));
         let qrInstance = null;
         let currentEventId = '';
         
@@ -516,6 +527,8 @@
         }
 
         async function loadData() {
+            // Ensure /api/config has loaded so APPS_SCRIPT_URL is set.
+            await configReady;
             const thead = document.getElementById('tableHead');
             const tbody = document.getElementById('tableBody');
 

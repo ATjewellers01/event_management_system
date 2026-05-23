@@ -1,4 +1,6 @@
 FROM node:20-alpine AS scanner-build
+ARG VITE_APPS_SCRIPT_URL
+ENV VITE_APPS_SCRIPT_URL=${VITE_APPS_SCRIPT_URL}
 WORKDIR /app/BotivateScanner
 COPY BotivateScanner/package*.json ./
 RUN npm install

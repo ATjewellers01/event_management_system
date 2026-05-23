@@ -8,7 +8,7 @@ import httpx
 # Fix path to allow importing from 'backend'
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.core.config import logger, FRONTEND_DIR
+from backend.core.config import logger, FRONTEND_DIR, APPS_SCRIPT_URL, PUBLIC_BASE_URL
 from backend.core.models import OCRRequest
 from backend.services.ocr_service import extract_card_data
 from backend.services.enrichment_service import run_waterfall_enrichment
@@ -20,6 +20,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
 )
+
+@app.get("/api/config")
+async def public_config():
+    return {
+        "appsScriptUrl": APPS_SCRIPT_URL,
+        "publicBaseUrl": PUBLIC_BASE_URL,
+    }
 
 @app.post("/ocr")
 async def perform_ocr(request: OCRRequest):

@@ -12,6 +12,9 @@ APPS_SCRIPT_URL = os.getenv("APPS_SCRIPT_URL")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
+# Public-facing deployment URL — used to build links the browser/QR points to.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
+
 if not OPENAI_API_KEY:
     raise ValueError("No OPENAI_API_KEY found in .env file.")
 if not APPS_SCRIPT_URL:
