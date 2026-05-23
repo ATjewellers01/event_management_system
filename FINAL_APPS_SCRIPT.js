@@ -28,7 +28,7 @@ function doGet(e) {
 /**
  * Handle POST requests for complex actions.
  */
-const SHEET_ID = "1c3v7DcBqfMK8yzPyMs3StwNj7bg7yc5gSnEsHnmuBlg";
+const SHEET_ID = "1x7eUUxrD_HiChuraWQz-zAkIrMJHAfKyK7OXEfLTYhY";
 
 function doPost(e) {
   try {
@@ -98,7 +98,7 @@ function extractData(photo1Base64) {
 
 function saveData(extractedData, photo1Base64, photo2Base64) {
   // --- CONFIGURATION ---
-  const FOLDER_ID = "1zggOUpg0SfMdi5LAXIfIWqZcBGMGHmMz";
+  const FOLDER_ID = "1GGdVdY5OAH-nF1DIJsbcMF6Lgep0d1DS";
   const SHEET_NAME = "Ai Card";
   // ---------------------
 
@@ -106,9 +106,19 @@ function saveData(extractedData, photo1Base64, photo2Base64) {
   try {
     const ss = SpreadsheetApp.openById(SHEET_ID);
     sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) throw new Error("Sheet with name '" + SHEET_NAME + "' not found.");
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_NAME);
+      sheet.appendRow([
+        "Timestamp", "Card Photo 1", "Card Photo 2", "Company Name", "Industry",
+        "Person Name", "Designation", "Phone", "Email", "Website", "Social Media",
+        "Address", "Services", "Company Size", "Founded Year", "Registration Status",
+        "Trust Score", "People (Founders)", "Is Validated", "Source Link",
+        "About Company", "Location"
+      ]);
+      sheet.getRange(1, 1, 1, 22).setFontWeight("bold").setBackground("#f3f3f3");
+    }
   } catch (e) {
-    throw new Error("FAILED to access Spreadsheet. Check SHEET_ID or Sheet Name. Details: " + e.message);
+    throw new Error("FAILED to access Spreadsheet. Check SHEET_ID. Details: " + e.message);
   }
 
   let folder;
@@ -338,7 +348,7 @@ function getEventList() {
 
 function saveEventCardData(extractedData, photo1Base64, photo2Base64, eventInfo) {
   const SHEET_NAME = "Event Ai Card";
-  const FOLDER_ID = "1zggOUpg0SfMdi5LAXIfIWqZcBGMGHmMz";
+  const FOLDER_ID = "1GGdVdY5OAH-nF1DIJsbcMF6Lgep0d1DS";
   const ss = SpreadsheetApp.openById(SHEET_ID);
   let sheet = ss.getSheetByName(SHEET_NAME);
   
@@ -742,10 +752,22 @@ function getCompanyProfile() {
  */
 function saveCompanyProfile(profileData) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName("Company Profile");
-  
-  if (!sheet) return { success: false, message: "Company Profile sheet not found!" };
-  
+  let sheet = ss.getSheetByName("Company Profile");
+
+  if (!sheet) {
+    sheet = ss.insertSheet("Company Profile");
+    sheet.appendRow([
+      "Timestamp", "Company Name", "Tagline", "Industry", "Founded Year",
+      "Official Phone", "Alternate Phone", "Official Email", "WhatsApp Number",
+      "Address Line 1", "City", "State", "Pincode", "Country",
+      "Website URL", "Google Maps Link", "LinkedIn", "Instagram", "Facebook", "Twitter",
+      "Services Provided", "About the company",
+      "Key Person Name", "Key Person Designation", "Key Person Phone", "Key Person Email",
+      "Logo"
+    ]);
+    sheet.getRange(1, 1, 1, 27).setFontWeight("bold").setBackground("#f3f3f3");
+  }
+
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const newRow = new Array(headers.length).fill("");
   newRow[0] = new Date(); // Timestamp

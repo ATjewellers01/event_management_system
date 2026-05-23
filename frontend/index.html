@@ -1496,13 +1496,14 @@
                 saveBtn.style.opacity = '0.8';
             }
 
+            let res;
             try {
                 const response = await fetch('/save-company-profile', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ profileData: prof })
                 });
-                const res = await response.json();
+                res = await response.json();
                 
                 if (res.success) {
                     // Update main UI icon if it was visible
