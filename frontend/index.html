@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeadScan Pro | Intelligent Business Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -228,7 +229,7 @@
             <!-- Background Accent -->
             <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50 -z-10"></div>
             
-            <div class="flex items-center justify-between gap-6 mb-8 relative z-10">
+            <div class="flex items-center justify-between gap-6 mb-8 relative z-10 flex-wrap">
                 <!-- Premium Toggle Tabs -->
                 <div class="flex w-full sm:w-auto bg-gray-100/50 backdrop-blur-md border border-gray-200 p-1 rounded-2xl shadow-inner overflow-hidden h-12">
                     <button onclick="switchDbTab('cards')" id="db-tab-cards" class="flex-1 sm:flex-none sm:min-w-[160px] flex items-center justify-center gap-2 px-6 py-2 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 bg-blue-600 text-white shadow-xl">
@@ -240,6 +241,11 @@
                         QR Visitors
                     </button>
                 </div>
+                <!-- Export to Excel -->
+                <button onclick="exportEventDbToExcel()" id="dbExportBtn" class="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-black uppercase tracking-widest rounded-xl bg-emerald-600 text-white shadow-md hover:bg-emerald-700 active:scale-95 transition-all">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"></path></svg>
+                    Export to Excel
+                </button>
             </div>
 
 
@@ -286,6 +292,7 @@
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Visitor</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Email/Phone</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Organization & Role</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">City</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Message</th>
                         </tr>
                     </thead>
@@ -753,12 +760,20 @@
                 setTimeout(fetchEvents, 50);
             }
 
+            // Shared state for the event drilldown so Export to Excel can read
+            // whatever the current modal is showing.
+            let dbCurrentTab = 'cards';
+            let dbCurrentCards = [];
+            let dbCurrentVisitors = [];
+            let dbCurrentEventName = '';
+
             window.switchDbTab = (tab) => {
+                dbCurrentTab = tab;
                 const cT = document.getElementById('db-cards-content');
                 const vT = document.getElementById('db-visitors-content');
                 const cB = document.getElementById('db-tab-cards');
                 const vB = document.getElementById('db-tab-visitors');
-                
+
                 const activeClasses = "flex-1 sm:flex-none sm:min-w-[160px] flex items-center justify-center gap-2 px-6 py-2 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 bg-blue-600 text-white shadow-xl z-10";
                 const inactiveClasses = "flex-1 sm:flex-none sm:min-w-[160px] flex items-center justify-center gap-2 px-6 py-2 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700 z-10";
 
@@ -773,6 +788,64 @@
                 }
             };
 
+            window.exportEventDbToExcel = () => {
+                if (typeof XLSX === 'undefined') {
+                    alert('Excel library still loading — please retry in a second.');
+                    return;
+                }
+
+                // Strip Sheets HYPERLINK() formulas → just the URL so Excel keeps it clickable.
+                const unwrap = (v) => {
+                    if (!v) return '';
+                    const s = String(v).trim();
+                    const m = s.match(/^=HYPERLINK\("([^"]+)"\s*,\s*"[^"]*"\)$/i);
+                    return m ? m[1] : s;
+                };
+
+                let rows, headers, sheetLabel, filePrefix;
+                if (dbCurrentTab === 'cards') {
+                    if (!dbCurrentCards.length) { alert('No scanned cards to export.'); return; }
+                    headers = [
+                        'Timestamp', 'Card Photo 1', 'Card Photo 2', 'Company Name', 'Industry',
+                        'Person Name', 'Designation', 'Phone', 'Email', 'Website',
+                        'Social Media', 'Address', 'Services', 'Company Size', 'Founded Year',
+                        'Registration Status', 'Trust Score', 'People (Founders)', 'Is Validated',
+                        'Source Link', 'About Company', 'Location'
+                    ];
+                    rows = dbCurrentCards.map(c => {
+                        const out = {};
+                        headers.forEach(h => { out[h] = unwrap(c[h]); });
+                        return out;
+                    });
+                    sheetLabel = 'Scanned Cards';
+                    filePrefix = 'scanned_cards';
+                } else {
+                    if (!dbCurrentVisitors.length) { alert('No QR visitors to export.'); return; }
+                    headers = [
+                        'Timestamp', 'Visitor Name', 'Visitor Mobile', 'Visitor Email',
+                        'Visitor Organization', 'Visitor Designation', 'Visitor City', 'Message'
+                    ];
+                    rows = dbCurrentVisitors.map(v => {
+                        const out = {};
+                        headers.forEach(h => { out[h] = unwrap(v[h]); });
+                        return out;
+                    });
+                    sheetLabel = 'QR Visitors';
+                    filePrefix = 'qr_visitors';
+                }
+
+                const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+                ws['!cols'] = headers.map(() => ({ wch: 22 }));
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, sheetLabel);
+
+                const slugify = (s) => String(s || '').trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                const today = new Date();
+                const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                const slug = dbCurrentEventName ? `_${slugify(dbCurrentEventName)}` : '';
+                XLSX.writeFile(wb, `${filePrefix}${slug}_${dateStr}.xlsx`);
+            };
+
             window.openDbView = async (eventId, eventName) => {
                 if (!eventId && !eventName) return;
                 const modal = document.getElementById('dbViewContainer');
@@ -785,6 +858,9 @@
                 main.classList.add('hidden');
                 loading.classList.remove('hidden');
                 cBody.innerHTML = ''; vBody.innerHTML = '';
+                dbCurrentEventName = eventName || '';
+                dbCurrentCards = [];
+                dbCurrentVisitors = [];
                 switchDbTab('cards');
 
                 try {
@@ -797,6 +873,8 @@
                     loading.classList.add('hidden');
 
                     if (res.success) {
+                        dbCurrentCards = Array.isArray(res.cards) ? res.cards : [];
+                        dbCurrentVisitors = Array.isArray(res.visitors) ? res.visitors : [];
                         // Populate Cards
                         res.cards.forEach((card, idx) => {
                             const img1 = card['Card Photo 1'] ? `<a href="${card['Card Photo 1']}" target="_blank" title="Photo 1" style="color:#2563eb;margin-right:8px;"><svg style="width:16px;height:16px;display:inline;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2"></path></svg></a>` : '';
@@ -852,13 +930,14 @@
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; font-weight:600; color:#1e293b;">${v['Visitor Name'] || 'N/A'}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${v['Visitor Email']}<br><span style="font-size:11px; opacity:0.7;">${v['Visitor Mobile']}</span></td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${v['Visitor Organization']}<br><span style="font-size:11px; opacity:0.7;">${v['Visitor Designation']}</span></td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${v['Visitor City'] || '--'}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${v['Message'] || '--'}</td>
                                 </tr>
                             `;
                             vBody.insertAdjacentHTML('beforeend', row);
                         });
                         if (res.visitors.length === 0) {
-                            vBody.innerHTML = '<tr><td colspan="4" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No QR visitors found for this event.</td></tr>';
+                            vBody.innerHTML = '<tr><td colspan="5" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No QR visitors found for this event.</td></tr>';
                         }
                     }
                 } catch (e) {
