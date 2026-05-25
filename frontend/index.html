@@ -423,7 +423,7 @@
         <div style="padding:24px 28px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
             <div>
                 <h2 style="font-size:18px;font-weight:800;color:#0f172a;margin:0;">Company Profile</h2>
-                <p style="font-size:12px;color:#94a3b8;margin:4px 0 0;font-weight:500;">Saved locally — used in every event automatically</p>
+                <p style="font-size:12px;color:#94a3b8;margin:4px 0 0;font-weight:500;">Synced from Google Sheets — used in every event automatically</p>
             </div>
             <button onclick="closeProfileDrawer()" style="width:34px;height:34px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;">
                 <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -1413,7 +1413,9 @@
                 'prof_kp_email': 'keyPersonEmail'
             };
 
-            // Clear values and show skeleton loaders
+            // Reset EVERY visible field + logo preview so nothing from a previous
+            // drawer open lingers. The Google Sheet is the single source of truth;
+            // we never trust any in-page or browser-local cache.
             Object.keys(fields).forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -1421,13 +1423,18 @@
                     el.classList.add('skeleton');
                 }
             });
-            
-            // Fetch from Sheets
+            const indReset = document.getElementById('prof_comp_industry');
+            if (indReset) indReset.value = '';
+            const logoPrev = document.getElementById('prof_logo_preview');
+            const logoPh = document.getElementById('prof_logo_placeholder');
+            if (logoPrev) { logoPrev.removeAttribute('src'); logoPrev.style.display = 'none'; }
+            if (logoPh) logoPh.style.display = 'block';
+
+            // Fetch from Sheets (cache-busted so a stale 304 can never replay).
             try {
-                const response = await fetch('/get-company-profile');
+                const response = await fetch('/get-company-profile', { cache: 'no-store' });
                 const res = await response.json();
-                
-                // Remove skeleton class
+
                 Object.keys(fields).forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.classList.remove('skeleton');
@@ -1441,13 +1448,12 @@
                     });
                     const indEl = document.getElementById('prof_comp_industry');
                     if (indEl && prof.industry) indEl.value = prof.industry;
-                    
-                    // Logo sync
-                    if (prof.logoBase64) {
-                        const prev = document.getElementById('prof_logo_preview');
-                        const ph = document.getElementById('prof_logo_placeholder');
-                        if (prev) { prev.src = prof.logoBase64; prev.style.display = 'block'; }
-                        if (ph) ph.style.display = 'none';
+
+                    // Logo sync — only show if the sheet actually has one.
+                    if (prof.logoBase64 && logoPrev) {
+                        logoPrev.src = prof.logoBase64;
+                        logoPrev.style.display = 'block';
+                        if (logoPh) logoPh.style.display = 'none';
                     }
                 }
             } catch (err) {
