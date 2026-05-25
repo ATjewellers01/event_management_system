@@ -598,19 +598,23 @@ function saveVisitorAndGetContact(visitorData) {
   }
 
   // 2. Save the visitor details. Header-aware writes let us add new columns
-  //    (e.g. "Visitor City") later without breaking sheets that already exist.
+  //    later without breaking sheets that already exist.
   let sheet = ss.getSheetByName(SHEET_NAME);
   const VISITOR_HEADERS = [
     "Timestamp",
     "Event ID",
     "Event Name",
-    "Visitor Name",
-    "Visitor Mobile",
-    "Visitor Email",
-    "Visitor Organization",
-    "Visitor Designation",
-    "Visitor City",
-    "Message"
+    "Company Name",
+    "Customer Name",
+    "WhatsApp No.",
+    "Groups",
+    "State",
+    "City",
+    "Address",
+    "GST No.",
+    "PAN No.",
+    "Mobile No.",
+    "Source"
   ];
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
@@ -628,17 +632,24 @@ function saveVisitorAndGetContact(visitorData) {
     });
   }
 
+  // Map payload (which uses snake-ish UI field names) onto the sheet headers.
+  // Both the public QR form and the in-app New Visitor tab post here; the only
+  // UI difference is the label ('Name' vs 'Customer Name') — same payload key.
   const fieldByHeader = {
     "Timestamp": new Date(),
     "Event ID": visitorData.eventId || "N/A",
     "Event Name": eventName,
-    "Visitor Name": visitorData.visitorName || "",
-    "Visitor Mobile": visitorData.visitorMobile || "",
-    "Visitor Email": visitorData.visitorEmail || "",
-    "Visitor Organization": visitorData.visitorOrg || "",
-    "Visitor Designation": visitorData.visitorDesig || "",
-    "Visitor City": visitorData.visitorCity || "",
-    "Message": visitorData.message || ""
+    "Company Name": visitorData.companyName || "",
+    "Customer Name": visitorData.customerName || visitorData.visitorName || "",
+    "WhatsApp No.": visitorData.whatsappNo || "",
+    "Groups": visitorData.groups || "",
+    "State": visitorData.state || "",
+    "City": visitorData.city || visitorData.visitorCity || "",
+    "Address": visitorData.address || "",
+    "GST No.": visitorData.gstNo || "",
+    "PAN No.": visitorData.panNo || "",
+    "Mobile No.": visitorData.mobileNo || visitorData.visitorMobile || "",
+    "Source": visitorData.source || "QR"
   };
   const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const row = headerRow.map((h) => (h in fieldByHeader ? fieldByHeader[h] : ""));

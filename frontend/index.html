@@ -288,12 +288,17 @@
             <div id="db-visitors-content" class="db-scroll-wrap hidden">
                 <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
                     <thead>
-                        <tr style="text-align: left; background: #f8fafc;">
-                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Visitor</th>
-                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Email/Phone</th>
-                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Organization & Role</th>
+                        <tr style="text-align: left; background: #f8fafc; white-space: nowrap;">
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Customer</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Company</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Mobile / WhatsApp</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Group</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">State</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">City</th>
-                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Message</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Address</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">GST No.</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">PAN No.</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Source</th>
                         </tr>
                     </thead>
                     <tbody id="db-visitors-body">
@@ -313,12 +318,15 @@
             <div class="scan-progress"></div>
 
             <!-- Tab Navigation -->
-            <div class="flex items-center gap-2 mb-8 bg-gray-50/50 p-1.5 rounded-2xl border border-gray-100 w-fit">
+            <div class="flex flex-wrap items-center gap-2 mb-8 bg-gray-50/50 p-1.5 rounded-2xl border border-gray-100 w-fit">
                 <button onclick="switchTab('scan')" id="tab-scan" class="px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all bg-white text-blue-600 shadow-sm border border-blue-50">
                     Scan Card
                 </button>
                 <button onclick="switchTab('qr')" id="tab-qr" class="px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all text-gray-400 hover:text-gray-600">
                     Event QR
+                </button>
+                <button onclick="switchTab('newVisitor')" id="tab-newVisitor" class="px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all text-gray-400 hover:text-gray-600">
+                    New Visitor
                 </button>
             </div>
             
@@ -410,13 +418,87 @@
                     </div>
                     <h3 class="text-2xl font-black text-gray-900 mb-2">Share Event QR</h3>
                     <p class="text-gray-500 max-w-sm mb-8 font-medium">Scan this QR to save event contact details directly to your phone's address book.</p>
-                    
+
                     <div class="flex gap-4">
                         <button onclick="downloadActiveQR()" class="flex items-center gap-3 px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             Download QR
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- New Visitor Tab Content (staff fills manually) -->
+            <div id="newVisitorTabContent" class="hidden">
+                <div class="max-w-2xl mx-auto py-6">
+                    <div class="text-center mb-8">
+                        <h3 class="text-2xl font-black text-gray-900 mb-2">Add New Visitor</h3>
+                        <p class="text-gray-500 max-w-md mx-auto font-medium text-sm">Manually enter visitor details. Submissions are saved to the same 'Visitor Details' sheet as the QR form.</p>
+                    </div>
+                    <form id="newVisitorForm" class="space-y-5">
+                        <div>
+                            <label class="input-label">Company Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="nv_company" class="input-field" required placeholder="Company Ltd.">
+                        </div>
+                        <div>
+                            <label class="input-label">Customer Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="nv_name" class="input-field" required placeholder="Full name">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="input-label">WhatsApp No.</label>
+                                <input type="tel" id="nv_whatsapp" class="input-field" placeholder="+91 9XXXXXXXXX">
+                            </div>
+                            <div>
+                                <label class="input-label">Mobile No.</label>
+                                <input type="tel" id="nv_mobile" class="input-field" placeholder="+91 9XXXXXXXXX">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="input-label">Groups</label>
+                            <select id="nv_groups" class="input-field">
+                                <option value="">Select group (optional)</option>
+                                <option>Atw</option>
+                                <option>Customer</option>
+                                <option>Branch Division</option>
+                                <option>CL Customer</option>
+                                <option>Jf Customer</option>
+                                <option>Karigar</option>
+                                <option>Staff</option>
+                                <option>Supplier</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="input-label">State <span class="text-red-500">*</span></label>
+                                <input type="text" id="nv_state" class="input-field" required placeholder="Chhattisgarh">
+                            </div>
+                            <div>
+                                <label class="input-label">City <span class="text-red-500">*</span></label>
+                                <input type="text" id="nv_city" class="input-field" required placeholder="Raipur">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="input-label">Address <span class="text-red-500">*</span></label>
+                            <input type="text" id="nv_address" class="input-field" required placeholder="Street, Area, Landmark">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="input-label">GST No.</label>
+                                <input type="text" id="nv_gst" class="input-field" placeholder="22AAAAA0000A1Z5">
+                            </div>
+                            <div>
+                                <label class="input-label">PAN No.</label>
+                                <input type="text" id="nv_pan" class="input-field" placeholder="AAAAA0000A">
+                            </div>
+                        </div>
+                        <div class="pt-2">
+                            <button type="submit" id="nvSubmitBtn" class="btn-primary w-full" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;padding:14px;border-radius:14px;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;border:none;cursor:pointer;">
+                                <span id="nvBtnText">Save Visitor</span>
+                                <span id="nvBtnLoader" class="hidden">Saving…</span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -820,18 +902,19 @@
                     sheetLabel = 'Scanned Cards';
                     filePrefix = 'scanned_cards';
                 } else {
-                    if (!dbCurrentVisitors.length) { alert('No QR visitors to export.'); return; }
+                    if (!dbCurrentVisitors.length) { alert('No visitors to export.'); return; }
                     headers = [
-                        'Timestamp', 'Visitor Name', 'Visitor Mobile', 'Visitor Email',
-                        'Visitor Organization', 'Visitor Designation', 'Visitor City', 'Message'
+                        'Timestamp', 'Event ID', 'Event Name', 'Company Name', 'Customer Name',
+                        'WhatsApp No.', 'Groups', 'State', 'City', 'Address',
+                        'GST No.', 'PAN No.', 'Mobile No.', 'Source'
                     ];
                     rows = dbCurrentVisitors.map(v => {
                         const out = {};
                         headers.forEach(h => { out[h] = unwrap(v[h]); });
                         return out;
                     });
-                    sheetLabel = 'QR Visitors';
-                    filePrefix = 'qr_visitors';
+                    sheetLabel = 'Visitors';
+                    filePrefix = 'visitors';
                 }
 
                 const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
@@ -924,20 +1007,31 @@
                         }
 
                         // Populate Visitors
+                        const visitorCell = (val) => (val == null || val === '') ? '--' : val;
                         res.visitors.forEach(v => {
+                            const mobile = v['Mobile No.'] || '';
+                            const whatsapp = v['WhatsApp No.'] || '';
+                            const phoneCell = (mobile || whatsapp)
+                                ? `${visitorCell(mobile)}${whatsapp ? `<br><span style="font-size:11px; opacity:0.7;">WA: ${whatsapp}</span>` : ''}`
+                                : '--';
                             const row = `
-                                <tr>
-                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; font-weight:600; color:#1e293b;">${v['Visitor Name'] || 'N/A'}</td>
-                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${v['Visitor Email']}<br><span style="font-size:11px; opacity:0.7;">${v['Visitor Mobile']}</span></td>
-                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${v['Visitor Organization']}<br><span style="font-size:11px; opacity:0.7;">${v['Visitor Designation']}</span></td>
-                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${v['Visitor City'] || '--'}</td>
-                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${v['Message'] || '--'}</td>
+                                <tr style="white-space:nowrap;">
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; font-weight:600; color:#1e293b;">${visitorCell(v['Customer Name'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Company Name'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${phoneCell}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Groups'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['State'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['City'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b; max-width:240px; overflow:hidden; text-overflow:ellipsis;">${visitorCell(v['Address'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['GST No.'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['PAN No.'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Source'])}</td>
                                 </tr>
                             `;
                             vBody.insertAdjacentHTML('beforeend', row);
                         });
                         if (res.visitors.length === 0) {
-                            vBody.innerHTML = '<tr><td colspan="5" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No QR visitors found for this event.</td></tr>';
+                            vBody.innerHTML = '<tr><td colspan="10" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No visitors found for this event.</td></tr>';
                         }
                     }
                 } catch (e) {
@@ -953,23 +1047,93 @@
             };
 
             window.switchTab = (tab) => {
-                const s = document.getElementById('scanTabContent');
-                const q = document.getElementById('qrTabContent');
-                const ts = document.getElementById('tab-scan');
-                const tq = document.getElementById('tab-qr');
+                const panels = {
+                    scan: document.getElementById('scanTabContent'),
+                    qr: document.getElementById('qrTabContent'),
+                    newVisitor: document.getElementById('newVisitorTabContent')
+                };
+                const tabs = {
+                    scan: document.getElementById('tab-scan'),
+                    qr: document.getElementById('tab-qr'),
+                    newVisitor: document.getElementById('tab-newVisitor')
+                };
                 const activeClasses = ['bg-white', 'text-blue-600', 'shadow-sm', 'border', 'border-blue-50'];
                 const inactiveClasses = ['text-gray-400', 'hover:text-gray-600'];
 
-                if (tab === 'scan') {
-                    s.classList.remove('hidden'); q.classList.add('hidden');
-                    ts.classList.add(...activeClasses); ts.classList.remove(...inactiveClasses);
-                    tq.classList.remove(...activeClasses); tq.classList.add(...inactiveClasses);
-                } else {
-                    s.classList.add('hidden'); q.classList.remove('hidden');
-                    tq.classList.add(...activeClasses); tq.classList.remove(...inactiveClasses);
-                    ts.classList.remove(...activeClasses); ts.classList.add(...inactiveClasses);
-                }
+                Object.entries(panels).forEach(([key, panel]) => {
+                    if (!panel) return;
+                    if (key === tab) panel.classList.remove('hidden');
+                    else panel.classList.add('hidden');
+                });
+                Object.entries(tabs).forEach(([key, btn]) => {
+                    if (!btn) return;
+                    if (key === tab) {
+                        btn.classList.add(...activeClasses);
+                        btn.classList.remove(...inactiveClasses);
+                    } else {
+                        btn.classList.remove(...activeClasses);
+                        btn.classList.add(...inactiveClasses);
+                    }
+                });
             };
+
+            // New Visitor tab — manual entry by staff. POSTs to the same
+            // /submit-visitor-and-get-contact endpoint as the public QR form so
+            // the row lands in the same 'Visitor Details' sheet. We discard the
+            // returned contactInfo (no card to show — staff stays on the page).
+            const nvForm = document.getElementById('newVisitorForm');
+            if (nvForm) {
+                nvForm.onsubmit = async (e) => {
+                    e.preventDefault();
+                    const ev = window.selectedEventInfo;
+                    if (!ev || !ev.id) {
+                        toastMe('Pick an event first.', '#ef4444');
+                        return;
+                    }
+                    const btnText = document.getElementById('nvBtnText');
+                    const btnLdr = document.getElementById('nvBtnLoader');
+                    const btn = document.getElementById('nvSubmitBtn');
+                    if (btn) btn.disabled = true;
+                    if (btnText) btnText.classList.add('hidden');
+                    if (btnLdr) btnLdr.classList.remove('hidden');
+
+                    const payload = {
+                        eventId: ev.id,
+                        source: 'Manual',
+                        companyName: document.getElementById('nv_company').value,
+                        customerName: document.getElementById('nv_name').value,
+                        whatsappNo: document.getElementById('nv_whatsapp').value,
+                        groups: document.getElementById('nv_groups').value,
+                        state: document.getElementById('nv_state').value,
+                        city: document.getElementById('nv_city').value,
+                        address: document.getElementById('nv_address').value,
+                        gstNo: document.getElementById('nv_gst').value,
+                        panNo: document.getElementById('nv_pan').value,
+                        mobileNo: document.getElementById('nv_mobile').value
+                    };
+
+                    try {
+                        const r = await fetch('/submit-visitor-and-get-contact', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const res = await r.json();
+                        if (res && res.success) {
+                            toastMe('Visitor saved ✅', '#10b981');
+                            nvForm.reset();
+                        } else {
+                            toastMe('Save failed: ' + (res && res.message ? res.message : 'Unknown error'), '#ef4444');
+                        }
+                    } catch (err) {
+                        toastMe('Network error — please retry.', '#ef4444');
+                    } finally {
+                        if (btn) btn.disabled = false;
+                        if (btnText) btnText.classList.remove('hidden');
+                        if (btnLdr) btnLdr.classList.add('hidden');
+                    }
+                };
+            }
 
             window.downloadActiveQR = async () => {
                 const img = document.getElementById('displayQR');

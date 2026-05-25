@@ -55,34 +55,60 @@
         <div id="formView" class="glass-card p-6 md:p-8 form-view animate-fade-in">
             <form id="visitorForm" class="space-y-5">
                 <div>
-                    <label class="input-label">Full Name <span class="text-red-500">*</span></label>
+                    <label class="input-label">Company Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="v_company" class="input-field" required placeholder="Company Ltd.">
+                </div>
+                <div>
+                    <label class="input-label">Name <span class="text-red-500">*</span></label>
                     <input type="text" id="v_name" class="input-field" required placeholder="John Doe">
-                </div>
-                <div>
-                    <label class="input-label">Mobile Number <span class="text-red-500">*</span></label>
-                    <input type="tel" id="v_mobile" class="input-field" required placeholder="+1 234 567 8900">
-                </div>
-                <div>
-                    <label class="input-label">Email Address <span class="text-red-500">*</span></label>
-                    <input type="email" id="v_email" class="input-field" required placeholder="john@example.com">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="input-label">Organization</label>
-                        <input type="text" id="v_org" class="input-field" placeholder="Company Ltd.">
+                        <label class="input-label">WhatsApp No.</label>
+                        <input type="tel" id="v_whatsapp" class="input-field" placeholder="+91 9XXXXXXXXX">
                     </div>
                     <div>
-                        <label class="input-label">Designation</label>
-                        <input type="text" id="v_desig" class="input-field" placeholder="Manager">
+                        <label class="input-label">Mobile No.</label>
+                        <input type="tel" id="v_mobile" class="input-field" placeholder="+91 9XXXXXXXXX">
                     </div>
                 </div>
                 <div>
-                    <label class="input-label">City (Optional)</label>
-                    <input type="text" id="v_city" class="input-field" placeholder="e.g. Raipur">
+                    <label class="input-label">Groups</label>
+                    <select id="v_groups" class="input-field">
+                        <option value="">Select group (optional)</option>
+                        <option>Atw</option>
+                        <option>Customer</option>
+                        <option>Branch Division</option>
+                        <option>CL Customer</option>
+                        <option>Jf Customer</option>
+                        <option>Karigar</option>
+                        <option>Staff</option>
+                        <option>Supplier</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="input-label">State <span class="text-red-500">*</span></label>
+                        <input type="text" id="v_state" class="input-field" required placeholder="Chhattisgarh">
+                    </div>
+                    <div>
+                        <label class="input-label">City <span class="text-red-500">*</span></label>
+                        <input type="text" id="v_city" class="input-field" required placeholder="Raipur">
+                    </div>
                 </div>
                 <div>
-                    <label class="input-label">Message / Note (Optional)</label>
-                    <textarea id="v_msg" class="input-field min-h-[80px]" placeholder="Looking forward to connecting..."></textarea>
+                    <label class="input-label">Address <span class="text-red-500">*</span></label>
+                    <input type="text" id="v_address" class="input-field" required placeholder="Street, Area, Landmark">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="input-label">GST No.</label>
+                        <input type="text" id="v_gst" class="input-field" placeholder="22AAAAA0000A1Z5">
+                    </div>
+                    <div>
+                        <label class="input-label">PAN No.</label>
+                        <input type="text" id="v_pan" class="input-field" placeholder="AAAAA0000A">
+                    </div>
                 </div>
                 <div class="pt-2">
                     <button type="submit" id="submitBtn" class="btn-primary">Submit Details</button>
@@ -225,13 +251,17 @@
 
             const payload = {
                 eventId: eventId,
-                visitorName: document.getElementById('v_name').value,
-                visitorMobile: document.getElementById('v_mobile').value,
-                visitorEmail: document.getElementById('v_email').value,
-                visitorOrg: document.getElementById('v_org').value,
-                visitorDesig: document.getElementById('v_desig').value,
-                visitorCity: document.getElementById('v_city').value,
-                message: document.getElementById('v_msg').value
+                source: 'QR',
+                companyName: document.getElementById('v_company').value,
+                customerName: document.getElementById('v_name').value,
+                whatsappNo: document.getElementById('v_whatsapp').value,
+                groups: document.getElementById('v_groups').value,
+                state: document.getElementById('v_state').value,
+                city: document.getElementById('v_city').value,
+                address: document.getElementById('v_address').value,
+                gstNo: document.getElementById('v_gst').value,
+                panNo: document.getElementById('v_pan').value,
+                mobileNo: document.getElementById('v_mobile').value
             };
 
             try {
