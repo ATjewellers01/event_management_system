@@ -417,9 +417,9 @@ function saveEventCardData(extractedData, photo1Base64, photo2Base64, eventInfo)
 
 function getEventById(eventId) {
     if (!eventId) return { success: false, message: "No Event ID provided" };
-    
+
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName("Event Details");
-    if (!sheet) return { success: false, message: "Sheet not found" };
+    if (!sheet) return { success: false, message: "Event not found" };
     
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
