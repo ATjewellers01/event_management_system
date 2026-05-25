@@ -1242,14 +1242,9 @@
                 };
             }
 
-            // Load stored logo if exists locally (can keep this for UI)
-            const _storedProf = JSON.parse(localStorage.getItem('botivate_profile') || '{}');
-            if (_storedProf.logoBase64 && logoPreview) {
-                logoBase64 = _storedProf.logoBase64;
-                logoPreview.src = logoBase64;
-                logoPreview.style.display = 'block';
-                if (logoPlaceholder) logoPlaceholder.style.display = 'none';
-            }
+            // Logo prefill is handled by loadCompanyProfile() reading from the sheet.
+            // We intentionally do not read from localStorage here so that a freshly
+            // uploaded logo cannot be overwritten by a stale cached one.
 
             eventForm.onsubmit = async (e) => {
                 e.preventDefault();
@@ -1517,6 +1512,8 @@
                 res = await response.json();
                 
                 if (res.success) {
+                    // Clear legacy localStorage key so it can never override the sheet on next open.
+                    try { localStorage.removeItem('botivate_profile'); } catch (e) {}
                     // Update main UI icon if it was visible
                     if (btn) {
                         btn.innerHTML = '<svg style="width:17px;height:17px;color:#16a34a;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>';
