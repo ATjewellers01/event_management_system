@@ -212,12 +212,12 @@ function saveData(extractedData, photo1Base64, photo2Base64) {
 function saveEventData(eventData) {
   const SHEET_NAME = "Event Details";
 
-  // --- Open Sheet ---
+  // --- Open Sheet (auto-create if missing) ---
   let sheet;
   try {
     const ss = SpreadsheetApp.openById(SHEET_ID);
     sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) throw new Error("Sheet '" + SHEET_NAME + "' not found.");
+    if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
   } catch (e) {
     throw new Error("FAILED to access Spreadsheet: " + e.message);
   }
