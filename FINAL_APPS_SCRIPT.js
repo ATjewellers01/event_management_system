@@ -597,36 +597,52 @@ function saveVisitorAndGetContact(visitorData) {
     };
   }
 
-  // 2. Save the visitor details
+  // 2. Save the visitor details. Header-aware writes let us add new columns
+  //    (e.g. "Visitor City") later without breaking sheets that already exist.
   let sheet = ss.getSheetByName(SHEET_NAME);
+  const VISITOR_HEADERS = [
+    "Timestamp",
+    "Event ID",
+    "Event Name",
+    "Visitor Name",
+    "Visitor Mobile",
+    "Visitor Email",
+    "Visitor Organization",
+    "Visitor Designation",
+    "Visitor City",
+    "Message"
+  ];
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow([
-      "Timestamp", 
-      "Event ID",
-      "Event Name",
-      "Visitor Name", 
-      "Visitor Mobile", 
-      "Visitor Email", 
-      "Visitor Organization", 
-      "Visitor Designation", 
-      "Message"
-    ]);
-    sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#f3f3f3");
+    sheet.appendRow(VISITOR_HEADERS);
+    sheet.getRange(1, 1, 1, VISITOR_HEADERS.length).setFontWeight("bold").setBackground("#f3f3f3");
+  } else {
+    // Backfill any missing headers (additive only — never reorder or delete).
+    const existingHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+    VISITOR_HEADERS.forEach((h) => {
+      if (existingHeaders.indexOf(h) === -1) {
+        const newCol = sheet.getLastColumn() + 1;
+        sheet.getRange(1, newCol).setValue(h).setFontWeight("bold").setBackground("#f3f3f3");
+        existingHeaders.push(h);
+      }
+    });
   }
-  
-  const timestamp = new Date();
-  sheet.appendRow([
-    timestamp,
-    visitorData.eventId || "N/A",
-    eventName,
-    visitorData.visitorName || "",
-    visitorData.visitorMobile || "",
-    visitorData.visitorEmail || "",
-    visitorData.visitorOrg || "",
-    visitorData.visitorDesig || "",
-    visitorData.message || ""
-  ]);
+
+  const fieldByHeader = {
+    "Timestamp": new Date(),
+    "Event ID": visitorData.eventId || "N/A",
+    "Event Name": eventName,
+    "Visitor Name": visitorData.visitorName || "",
+    "Visitor Mobile": visitorData.visitorMobile || "",
+    "Visitor Email": visitorData.visitorEmail || "",
+    "Visitor Organization": visitorData.visitorOrg || "",
+    "Visitor Designation": visitorData.visitorDesig || "",
+    "Visitor City": visitorData.visitorCity || "",
+    "Message": visitorData.message || ""
+  };
+  const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const row = headerRow.map((h) => (h in fieldByHeader ? fieldByHeader[h] : ""));
+  sheet.appendRow(row);
 
   // 3. Merging with Global Company Profile
   const globalProfile = getCompanyProfile().profile;

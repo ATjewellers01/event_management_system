@@ -77,6 +77,10 @@
                     </div>
                 </div>
                 <div>
+                    <label class="input-label">City (Optional)</label>
+                    <input type="text" id="v_city" class="input-field" placeholder="e.g. Raipur">
+                </div>
+                <div>
                     <label class="input-label">Message / Note (Optional)</label>
                     <textarea id="v_msg" class="input-field min-h-[80px]" placeholder="Looking forward to connecting..."></textarea>
                 </div>
@@ -226,6 +230,7 @@
                 visitorEmail: document.getElementById('v_email').value,
                 visitorOrg: document.getElementById('v_org').value,
                 visitorDesig: document.getElementById('v_desig').value,
+                visitorCity: document.getElementById('v_city').value,
                 message: document.getElementById('v_msg').value
             };
 

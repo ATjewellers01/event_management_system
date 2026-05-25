@@ -182,6 +182,14 @@
             </div>
         </div>
 
+        <!-- Export Action Bar -->
+        <div class="flex justify-end mb-3">
+            <button onclick="exportCurrentTabToExcel()" id="exportBtn" class="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-black uppercase tracking-widest rounded-xl bg-emerald-600 text-white shadow-md hover:bg-emerald-700 active:scale-95 transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"></path></svg>
+                Export to Excel
+            </button>
+        </div>
+
         <!-- Filters Bar -->
         <div class="grid grid-cols-2 lg:grid-cols-12 gap-3 mb-4 p-3 bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200 shadow-sm relative z-50">
             <div class="col-span-2 lg:col-span-6">
@@ -294,6 +302,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         // Config loaded from the backend's /api/config endpoint so deployment
         // URLs are not baked into source. Defaults keep the page usable if the
@@ -369,12 +378,14 @@
         ];
 
         const EVENTS_COL_KEYS = [
-            ['S No.'], ['Event ID'], ['Event Name'], ['Visitor Name'], ['Visitor Email'], 
-            ['Visitor Mobile'], ['Visitor Organization'], ['Visitor Designation'], ['Message']
+            ['S No.'], ['Event ID'], ['Event Name'], ['Visitor Name'], ['Visitor Email'],
+            ['Visitor Mobile'], ['Visitor Organization'], ['Visitor Designation'],
+            ['Visitor City'], ['Message']
         ];
 
         let currentTab = 'leads'; // or 'events'
         let originalData = []; // Store full data for filtering
+        let currentFilteredRows = []; // Mirrors what's currently rendered, used by Export to Excel
 
         function switchTab(tab) {
             currentTab = tab;
@@ -488,19 +499,20 @@
             const filtered = originalData.filter(row => {
                 // Event ID Match
                 if (eventId && getValue(row, ['Event ID']) !== eventId) return false;
-                
+
                 // Event Name Match
                 if (eventName && getValue(row, ['Event Name']) !== eventName) return false;
-                
+
                 // Search Match
                 if (searchTerm) {
                     const rowText = Object.values(row).join(' ').toLowerCase();
                     if (!rowText.includes(searchTerm)) return false;
                 }
-                
+
                 return true;
             });
-            
+
+            currentFilteredRows = filtered;
             renderTableData(filtered);
         }
 
@@ -511,6 +523,59 @@
                 if (foundKey) return row[foundKey];
             }
             return '';
+        }
+
+        // Strip Sheets HYPERLINK() formulas down to just the URL so Excel cells
+        // remain clickable instead of dumping the formula as a literal string.
+        function unwrapHyperlink(val) {
+            if (!val) return '';
+            const s = String(val).trim();
+            const m = s.match(/^=HYPERLINK\("([^"]+)"\s*,\s*"[^"]*"\)$/i);
+            return m ? m[1] : s;
+        }
+
+        function exportCurrentTabToExcel() {
+            if (typeof XLSX === 'undefined') {
+                alert('Excel library still loading — please retry in a second.');
+                return;
+            }
+            const rows = currentFilteredRows && currentFilteredRows.length ? currentFilteredRows : originalData;
+            if (!rows || rows.length === 0) {
+                alert('Nothing to export — no rows are currently visible.');
+                return;
+            }
+
+            const colDefs = currentTab === 'leads' ? LEADS_COL_KEYS : EVENTS_COL_KEYS;
+            // Drop the 'S No.' column from the export — it's display-only.
+            const exportCols = colDefs.filter(c => (c[0] || '').toLowerCase() !== 's no.');
+            const headers = exportCols.map(c => c[0]);
+
+            const data = rows.map((row) => {
+                const out = {};
+                exportCols.forEach((colKeyList) => {
+                    const header = colKeyList[0];
+                    let v = getValue(row, colKeyList);
+                    if (v && typeof v === 'string' && v.indexOf('=HYPERLINK') === 0) v = unwrapHyperlink(v);
+                    out[header] = v == null ? '' : v;
+                });
+                return out;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(data, { header: headers });
+            ws['!cols'] = headers.map(() => ({ wch: 22 }));
+            const wb = XLSX.utils.book_new();
+            const sheetLabel = currentTab === 'leads' ? 'Scanned Cards' : 'QR Visitors';
+            XLSX.utils.book_append_sheet(wb, ws, sheetLabel);
+
+            // Filename: include event-name filter if one is active, plus the date.
+            const eventName = document.getElementById('eventNameFilter').value;
+            const slugify = (s) => String(s).trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const base = currentTab === 'leads' ? 'scanned_cards' : 'qr_visitors';
+            const filename = (eventName ? `${base}_${slugify(eventName)}_${dateStr}` : `${base}_${dateStr}`) + '.xlsx';
+
+            XLSX.writeFile(wb, filename);
         }
 
 
@@ -611,9 +676,10 @@
         }
 
         function renderTableData(data) {
+            currentFilteredRows = data; // Keep Export to Excel in sync with whatever's on screen.
             const tbody = document.getElementById('tableBody');
             const colKeys = currentTab === 'leads' ? LEADS_COL_KEYS : EVENTS_COL_KEYS;
-            
+
             tbody.innerHTML = '';
 
             if (data.length === 0) {
