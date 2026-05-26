@@ -180,30 +180,38 @@ function saveData(extractedData, photo1Base64, photo2Base64) {
     keyPeopleString = parts.join("\n");
   }
 
+  // Prefix +, =, -, @ with apostrophe so phone numbers ("+91 ...") don't
+  // get parsed as formulas → #ERROR! Formula parse error.
+  const safe = (v) => {
+    if (v == null) return "";
+    const s = String(v);
+    return /^[=+\-@]/.test(s) ? "'" + s : s;
+  };
+
   // Append Row (Columns A-V)
   sheet.appendRow([
     timestamp,                          // A
     url1,                               // B
     url2,                               // C
-    extractedData.company || "",        // D
-    extractedData.industry || "",       // E 
-    extractedData.name || "",           // F
-    extractedData.title || "",          // G 
-    extractedData.phone || "",          // H
-    extractedData.email || "",          // I
-    extractedData.website || "",        // J 
-    extractedData.social_media || "",   // K 
-    extractedData.address || "",        // L
-    extractedData.services || "",       // M 
-    extractedData.company_size || "",   // N 
-    extractedData.established_year || extractedData.founded_year || "", // O 
-    extractedData.registration_status || "", // P 
-    extractedData.trust_score || "",    // Q
-    keyPeopleString,                    // R 
-    extractedData.is_validated,         // S
-    validationLink,                     // T
-    extractedData.about_the_company || "", // U
-    extractedData.location || ""          // V
+    safe(extractedData.company || ""),        // D
+    safe(extractedData.industry || ""),       // E
+    safe(extractedData.name || ""),           // F
+    safe(extractedData.title || ""),          // G
+    safe(extractedData.phone || ""),          // H
+    safe(extractedData.email || ""),          // I
+    safe(extractedData.website || ""),        // J
+    safe(extractedData.social_media || ""),   // K
+    safe(extractedData.address || ""),        // L
+    safe(extractedData.services || ""),       // M
+    safe(extractedData.company_size || ""),   // N
+    safe(extractedData.established_year || extractedData.founded_year || ""), // O
+    safe(extractedData.registration_status || ""), // P
+    safe(extractedData.trust_score || ""),    // Q
+    safe(keyPeopleString),              // R
+    safe(extractedData.is_validated),         // S
+    validationLink,                     // T  (intentionally raw — may be =HYPERLINK)
+    safe(extractedData.about_the_company || ""), // U
+    safe(extractedData.location || "")          // V
   ]);
 
   return { message: "✅ Data saved successfully!" };
@@ -381,9 +389,19 @@ function saveEventCardData(extractedData, photo1Base64, photo2Base64, eventInfo)
 
   const img1 = saveImage(photo1Base64, "front");
   const img2 = saveImage(photo2Base64, "back");
-  
+
   const d = extractedData || {};
-  
+
+  // Any cell value starting with +, =, -, or @ is treated by Sheets as a
+  // formula. Phone numbers like "+91 9977447111" then blow up as
+  // #ERROR! Formula parse error. Prefix those with an apostrophe so the
+  // cell renders as plain text.
+  const safe = (v) => {
+    if (v == null) return "";
+    const s = String(v);
+    return /^[=+\-@]/.test(s) ? "'" + s : s;
+  };
+
   sheet.appendRow([
     timestamp,
     eventInfo.id || "N/A",
@@ -391,25 +409,25 @@ function saveEventCardData(extractedData, photo1Base64, photo2Base64, eventInfo)
     eventInfo.startDate || "N/A",
     eventInfo.endDate || "N/A",
     img1, img2,
-    d.company_name || d.company || "",
-    d.industry || "",
-    d.person_name || d.name || "",
-    d.designation || d.title || "",
-    d.phone || "",
-    d.email || "",
-    d.website || "",
-    d.social_media || "",
-    d.address || "",
-    d.services || "",
-    d.company_size || "",
-    d.founded_year || d.established_year || "",
-    d.registration_status || "",
-    d.trust_score || "",
-    d.people || d.key_people || "",
-    d.is_validated || "",
+    safe(d.company_name || d.company || ""),
+    safe(d.industry || ""),
+    safe(d.person_name || d.name || ""),
+    safe(d.designation || d.title || ""),
+    safe(d.phone || ""),
+    safe(d.email || ""),
+    safe(d.website || ""),
+    safe(d.social_media || ""),
+    safe(d.address || ""),
+    safe(d.services || ""),
+    safe(d.company_size || ""),
+    safe(d.founded_year || d.established_year || ""),
+    safe(d.registration_status || ""),
+    safe(d.trust_score || ""),
+    safe(d.people || d.key_people || ""),
+    safe(d.is_validated || ""),
     d.source_link || d.validation_source || "",
-    d.about_company || d.about_the_company || "",
-    d.location || ""
+    safe(d.about_company || d.about_the_company || ""),
+    safe(d.location || "")
   ]);
 
   return { success: true, message: "Card saved to Event Hub!" };
