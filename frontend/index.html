@@ -293,6 +293,7 @@
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Company</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Mobile / WhatsApp</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Group</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Sub-Group</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">State</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">City</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Address</th>
@@ -438,26 +439,26 @@
                     <form id="newVisitorForm" class="space-y-5">
                         <div>
                             <label class="input-label">Company Name <span class="text-red-500">*</span></label>
-                            <input type="text" id="nv_company" class="input-field" required placeholder="Company Ltd.">
+                            <input type="text" id="nv_company" class="input-field" required>
                         </div>
                         <div>
                             <label class="input-label">Customer Name <span class="text-red-500">*</span></label>
-                            <input type="text" id="nv_name" class="input-field" required placeholder="Full name">
+                            <input type="text" id="nv_name" class="input-field" required>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="input-label">WhatsApp No.</label>
-                                <input type="tel" id="nv_whatsapp" class="input-field" placeholder="+91 9XXXXXXXXX">
+                                <input type="tel" id="nv_whatsapp" class="input-field">
                             </div>
                             <div>
                                 <label class="input-label">Mobile No.</label>
-                                <input type="tel" id="nv_mobile" class="input-field" placeholder="+91 9XXXXXXXXX">
+                                <input type="tel" id="nv_mobile" class="input-field">
                             </div>
                         </div>
                         <div>
-                            <label class="input-label">Groups</label>
-                            <select id="nv_groups" class="input-field">
-                                <option value="">Select group (optional)</option>
+                            <label class="input-label">Group <span class="text-red-500">*</span></label>
+                            <select id="nv_groups" class="input-field" required>
+                                <option value="">Select group</option>
                                 <option>Atw</option>
                                 <option>Customer</option>
                                 <option>Branch Division</option>
@@ -468,28 +469,41 @@
                                 <option>Supplier</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="input-label">Sub-Group <span class="text-red-500">*</span></label>
+                            <select id="nv_subgroup" class="input-field" required>
+                                <option value="">Select sub-group</option>
+                                <option>Gold</option>
+                                <option>Gold Mini</option>
+                                <option>Silver</option>
+                                <option>Platinum</option>
+                                <option>PC Aware</option>
+                                <option>PC Unaware</option>
+                                <option>Lost Customer</option>
+                            </select>
+                        </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="input-label">State <span class="text-red-500">*</span></label>
-                                <input type="text" id="nv_state" class="input-field" required placeholder="Chhattisgarh">
+                                <input type="text" id="nv_state" class="input-field" required>
                             </div>
                             <div>
                                 <label class="input-label">City <span class="text-red-500">*</span></label>
-                                <input type="text" id="nv_city" class="input-field" required placeholder="Raipur">
+                                <input type="text" id="nv_city" class="input-field" required>
                             </div>
                         </div>
                         <div>
                             <label class="input-label">Address <span class="text-red-500">*</span></label>
-                            <input type="text" id="nv_address" class="input-field" required placeholder="Street, Area, Landmark">
+                            <input type="text" id="nv_address" class="input-field" required>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="input-label">GST No.</label>
-                                <input type="text" id="nv_gst" class="input-field" placeholder="22AAAAA0000A1Z5">
+                                <input type="text" id="nv_gst" class="input-field">
                             </div>
                             <div>
                                 <label class="input-label">PAN No.</label>
-                                <input type="text" id="nv_pan" class="input-field" placeholder="AAAAA0000A">
+                                <input type="text" id="nv_pan" class="input-field">
                             </div>
                         </div>
                         <div class="pt-2">
@@ -905,7 +919,7 @@
                     if (!dbCurrentVisitors.length) { alert('No visitors to export.'); return; }
                     headers = [
                         'Timestamp', 'Event ID', 'Event Name', 'Company Name', 'Customer Name',
-                        'WhatsApp No.', 'Groups', 'State', 'City', 'Address',
+                        'WhatsApp No.', 'Groups', 'Sub-Group', 'State', 'City', 'Address',
                         'GST No.', 'PAN No.', 'Mobile No.', 'Source'
                     ];
                     rows = dbCurrentVisitors.map(v => {
@@ -1020,6 +1034,7 @@
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Company Name'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${phoneCell}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Groups'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Sub-Group'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['State'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['City'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b; max-width:240px; overflow:hidden; text-overflow:ellipsis;">${visitorCell(v['Address'])}</td>
@@ -1031,7 +1046,7 @@
                             vBody.insertAdjacentHTML('beforeend', row);
                         });
                         if (res.visitors.length === 0) {
-                            vBody.innerHTML = '<tr><td colspan="10" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No visitors found for this event.</td></tr>';
+                            vBody.innerHTML = '<tr><td colspan="11" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No visitors found for this event.</td></tr>';
                         }
                     }
                 } catch (e) {
@@ -1104,6 +1119,7 @@
                         customerName: document.getElementById('nv_name').value,
                         whatsappNo: document.getElementById('nv_whatsapp').value,
                         groups: document.getElementById('nv_groups').value,
+                        subGroup: document.getElementById('nv_subgroup').value,
                         state: document.getElementById('nv_state').value,
                         city: document.getElementById('nv_city').value,
                         address: document.getElementById('nv_address').value,

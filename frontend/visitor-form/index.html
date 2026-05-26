@@ -56,26 +56,26 @@
             <form id="visitorForm" class="space-y-5">
                 <div>
                     <label class="input-label">Company Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="v_company" class="input-field" required placeholder="Company Ltd.">
+                    <input type="text" id="v_company" class="input-field" required>
                 </div>
                 <div>
                     <label class="input-label">Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="v_name" class="input-field" required placeholder="John Doe">
+                    <input type="text" id="v_name" class="input-field" required>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="input-label">WhatsApp No.</label>
-                        <input type="tel" id="v_whatsapp" class="input-field" placeholder="+91 9XXXXXXXXX">
+                        <input type="tel" id="v_whatsapp" class="input-field">
                     </div>
                     <div>
                         <label class="input-label">Mobile No.</label>
-                        <input type="tel" id="v_mobile" class="input-field" placeholder="+91 9XXXXXXXXX">
+                        <input type="tel" id="v_mobile" class="input-field">
                     </div>
                 </div>
                 <div>
-                    <label class="input-label">Groups</label>
-                    <select id="v_groups" class="input-field">
-                        <option value="">Select group (optional)</option>
+                    <label class="input-label">Group <span class="text-red-500">*</span></label>
+                    <select id="v_groups" class="input-field" required>
+                        <option value="">Select group</option>
                         <option>Atw</option>
                         <option>Customer</option>
                         <option>Branch Division</option>
@@ -86,28 +86,41 @@
                         <option>Supplier</option>
                     </select>
                 </div>
+                <div>
+                    <label class="input-label">Sub-Group <span class="text-red-500">*</span></label>
+                    <select id="v_subgroup" class="input-field" required>
+                        <option value="">Select sub-group</option>
+                        <option>Gold</option>
+                        <option>Gold Mini</option>
+                        <option>Silver</option>
+                        <option>Platinum</option>
+                        <option>PC Aware</option>
+                        <option>PC Unaware</option>
+                        <option>Lost Customer</option>
+                    </select>
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="input-label">State <span class="text-red-500">*</span></label>
-                        <input type="text" id="v_state" class="input-field" required placeholder="Chhattisgarh">
+                        <input type="text" id="v_state" class="input-field" required>
                     </div>
                     <div>
                         <label class="input-label">City <span class="text-red-500">*</span></label>
-                        <input type="text" id="v_city" class="input-field" required placeholder="Raipur">
+                        <input type="text" id="v_city" class="input-field" required>
                     </div>
                 </div>
                 <div>
                     <label class="input-label">Address <span class="text-red-500">*</span></label>
-                    <input type="text" id="v_address" class="input-field" required placeholder="Street, Area, Landmark">
+                    <input type="text" id="v_address" class="input-field" required>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="input-label">GST No.</label>
-                        <input type="text" id="v_gst" class="input-field" placeholder="22AAAAA0000A1Z5">
+                        <input type="text" id="v_gst" class="input-field">
                     </div>
                     <div>
                         <label class="input-label">PAN No.</label>
-                        <input type="text" id="v_pan" class="input-field" placeholder="AAAAA0000A">
+                        <input type="text" id="v_pan" class="input-field">
                     </div>
                 </div>
                 <div class="pt-2">
@@ -256,6 +269,7 @@
                 customerName: document.getElementById('v_name').value,
                 whatsappNo: document.getElementById('v_whatsapp').value,
                 groups: document.getElementById('v_groups').value,
+                subGroup: document.getElementById('v_subgroup').value,
                 state: document.getElementById('v_state').value,
                 city: document.getElementById('v_city').value,
                 address: document.getElementById('v_address').value,
