@@ -1,16 +1,31 @@
 from backend.core.config import async_client, logger
 from backend.core.models import BasicOCR
-from google.cloud import translate_v2
-import os
+import re
 
-def translate_hindi_to_english(text: str) -> str:
+def detect_hindi_text(text: str) -> bool:
     if not text:
+        return False
+    hindi_unicode_range = re.compile(r'[ऀ-ॿ]')
+    return bool(hindi_unicode_range.search(text))
+
+async def translate_hindi_to_english(text: str) -> str:
+    if not text or not detect_hindi_text(text):
         return text
 
     try:
-        translate_client = translate_v2.Client()
-        result = translate_client.translate_text(text, target_language='en')
-        return result['translatedText']
+        response = await async_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Translate this Hindi text to English. Return ONLY the English translation, nothing else:\n\n{text}"
+                }
+            ],
+            temperature=0.0
+        )
+        translated = response.choices[0].message.content.strip()
+        logger.info(f"Translated: '{text}' → '{translated}'")
+        return translated
     except Exception as e:
         logger.warning(f"Translation failed for '{text}': {str(e)}")
         return text
@@ -54,6 +69,6 @@ async def extract_card_data(base64_img1: str, base64_img2: str = None):
     fields_to_translate = ['company', 'name', 'address', 'slogan']
     for field in fields_to_translate:
         if field in data and data[field]:
-            data[field] = translate_hindi_to_english(data[field])
+            data[field] = await translate_hindi_to_english(data[field])
 
     return data
