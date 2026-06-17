@@ -300,6 +300,7 @@
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">GST No.</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">PAN No.</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Source</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9; text-align: center;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="db-visitors-body">
@@ -1022,7 +1023,7 @@
 
                         // Populate Visitors
                         const visitorCell = (val) => (val == null || val === '') ? '--' : val;
-                        res.visitors.forEach(v => {
+                        res.visitors.forEach((v, idx) => {
                             const mobile = v['Mobile No.'] || '';
                             const whatsapp = v['WhatsApp No.'] || '';
                             const phoneCell = (mobile || whatsapp)
@@ -1041,6 +1042,9 @@
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['GST No.'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['PAN No.'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Source'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; text-align:center;">
+                                        <button onclick="openEditVisitorModal('${idx}', ${JSON.stringify(v).replace(/"/g, '&quot;')})" style="padding:6px 12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">Edit</button>
+                                    </td>
                                 </tr>
                             `;
                             vBody.insertAdjacentHTML('beforeend', row);
@@ -1236,11 +1240,16 @@
                              const endDate = ev.endDate ? new Date(ev.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBA';
                              
                              card.innerHTML = `
-                                <div class="flex justify-between items-center mb-2" style="pointer-events:none">
-                                    <div class="p-1.5 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                <div class="flex justify-between items-center mb-2">
+                                    <div class="p-1.5 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all" style="pointer-events:none">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                     </div>
-                                    <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest">${ev.id}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest" style="pointer-events:none">${ev.id}</span>
+                                        <button onclick="event.stopPropagation(); deleteEventWithConfirm('${ev.id}', '${ev.name}')" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Delete event">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 <h3 class="text-sm font-bold text-gray-800 transition-colors group-hover:text-blue-700 leading-tight mb-1.5" style="pointer-events:none">${ev.name}</h3>
                                 ${ev.location ? `<div class="flex items-center gap-1 mb-1.5" style="pointer-events:none">
@@ -1826,6 +1835,237 @@
                 if (saveText && !res?.success) saveText.classList.remove('hidden');
             }
         }
+
+        // Delete Event with Confirmation
+        window.deleteEventWithConfirm = (eventId, eventName) => {
+            const msg = `Delete "${eventName}" and ALL related data (cards, visitors)?\n\nThis cannot be undone.`;
+            if (!confirm(msg)) return;
+
+            const btn = event?.target?.closest('button');
+            if (btn) btn.disabled = true;
+
+            fetch(`/api/event/${eventId}`, { method: 'DELETE' })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        toastMe(`Event "${eventName}" deleted!`, '#10b981');
+                        setTimeout(() => {
+                            if (window.selectedEventInfo?.id === eventId) {
+                                showEventList();
+                            }
+                            fetchEvents();
+                        }, 800);
+                    } else {
+                        toastMe('Delete failed: ' + res.message, '#ef4444');
+                        if (btn) btn.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    toastMe('Error deleting event', '#ef4444');
+                    if (btn) btn.disabled = false;
+                });
+        };
+
+        // Edit Visitor Modal
+        window.openEditVisitorModal = (visitorRowIndex, visitorData) => {
+            const modal = document.getElementById('editVisitorModal');
+            if (!modal) createEditVisitorModal();
+
+            const m = document.getElementById('editVisitorModal');
+            m.style.display = 'flex';
+
+            // Populate form with visitor data
+            document.getElementById('ev_rowIndex').value = visitorRowIndex;
+            document.getElementById('ev_name').value = visitorData.customerName || '';
+            document.getElementById('ev_company').value = visitorData.companyName || '';
+            document.getElementById('ev_mobile').value = visitorData.mobileNo || '';
+            document.getElementById('ev_whatsapp').value = visitorData.whatsappNo || '';
+            document.getElementById('ev_email').value = visitorData.email || '';
+            document.getElementById('ev_designation').value = visitorData.designation || '';
+            document.getElementById('ev_groups').value = visitorData.groups || '';
+            document.getElementById('ev_subgroup').value = visitorData.subGroup || '';
+            document.getElementById('ev_state').value = visitorData.state || '';
+            document.getElementById('ev_city').value = visitorData.city || '';
+            document.getElementById('ev_address').value = visitorData.address || '';
+            document.getElementById('ev_gst').value = visitorData.gstNo || '';
+            document.getElementById('ev_pan').value = visitorData.panNo || '';
+        };
+
+        window.closeEditVisitorModal = () => {
+            const m = document.getElementById('editVisitorModal');
+            if (m) m.style.display = 'none';
+        };
+
+        window.submitEditVisitor = async () => {
+            const rowIndex = document.getElementById('ev_rowIndex').value;
+            const data = {
+                customerName: document.getElementById('ev_name').value,
+                companyName: document.getElementById('ev_company').value,
+                mobileNo: document.getElementById('ev_mobile').value,
+                whatsappNo: document.getElementById('ev_whatsapp').value,
+                email: document.getElementById('ev_email').value,
+                designation: document.getElementById('ev_designation').value,
+                groups: document.getElementById('ev_groups').value,
+                subGroup: document.getElementById('ev_subgroup').value,
+                state: document.getElementById('ev_state').value,
+                city: document.getElementById('ev_city').value,
+                address: document.getElementById('ev_address').value,
+                gstNo: document.getElementById('ev_gst').value,
+                panNo: document.getElementById('ev_pan').value
+            };
+
+            const btn = document.getElementById('evSubmitBtn');
+            btn.disabled = true;
+
+            try {
+                const r = await fetch(`/api/visitor/${rowIndex}_${Date.now()}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const res = await r.json();
+                if (res.success) {
+                    toastMe('Visitor updated!', '#10b981');
+                    closeEditVisitorModal();
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    toastMe('Update failed: ' + res.message, '#ef4444');
+                }
+            } catch (err) {
+                toastMe('Error updating visitor', '#ef4444');
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        function createEditVisitorModal() {
+            const modal = document.createElement('div');
+            modal.id = 'editVisitorModal';
+            modal.style.cssText = `
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(15,23,42,0.4);
+                backdrop-filter: blur(4px);
+                z-index: 300;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            `;
+
+            modal.innerHTML = `
+                <div style="background:white;border-radius:24px;padding:32px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 70px rgba(0,0,0,0.15);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                        <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0;">Edit Visitor Details</h2>
+                        <button onclick="closeEditVisitorModal()" style="width:32px;height:32px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:18px;color:#64748b;">×</button>
+                    </div>
+
+                    <form style="display:flex;flex-direction:column;gap:16px;">
+                        <input type="hidden" id="ev_rowIndex">
+
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Customer Name</label>
+                            <input type="text" id="ev_name" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                        </div>
+
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Company Name</label>
+                            <input type="text" id="ev_company" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Mobile No.</label>
+                                <input type="tel" id="ev_mobile" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">WhatsApp No.</label>
+                                <input type="tel" id="ev_whatsapp" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Email</label>
+                            <input type="email" id="ev_email" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                        </div>
+
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Designation</label>
+                            <input type="text" id="ev_designation" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Groups</label>
+                                <select id="ev_groups" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                                    <option value="">Select</option>
+                                    <option>Atw</option>
+                                    <option>Customer</option>
+                                    <option>Branch Division</option>
+                                    <option>CL Customer</option>
+                                    <option>Jf Customer</option>
+                                    <option>Karigar</option>
+                                    <option>Staff</option>
+                                    <option>Supplier</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Sub-Group</label>
+                                <select id="ev_subgroup" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                                    <option value="">Select</option>
+                                    <option>Gold</option>
+                                    <option>Gold Mini</option>
+                                    <option>Silver</option>
+                                    <option>Platinum</option>
+                                    <option>PC Aware</option>
+                                    <option>PC Unaware</option>
+                                    <option>Lost Customer</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">State</label>
+                                <input type="text" id="ev_state" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">City</label>
+                                <input type="text" id="ev_city" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Address</label>
+                            <input type="text" id="ev_address" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">GST No.</label>
+                                <input type="text" id="ev_gst" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">PAN No.</label>
+                                <input type="text" id="ev_pan" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:12px;margin-top:20px;">
+                            <button type="button" id="evSubmitBtn" onclick="submitEditVisitor()" style="flex:1;padding:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;">Update Visitor</button>
+                            <button type="button" onclick="closeEditVisitorModal()" style="flex:1;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;color:#64748b;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Close on backdrop click
+            modal.onclick = (e) => {
+                if (e.target === modal) closeEditVisitorModal();
+            };
+        };
     </script>
     <!-- Camera Overlay -->
     <div id="cameraOverlay">

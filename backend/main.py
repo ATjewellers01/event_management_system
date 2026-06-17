@@ -192,6 +192,37 @@ async def submit_visitor_and_get_contact(request: dict):
         logger.error(f"Submit Visitor Error: {e}")
         return {"success": False, "message": str(e)}
 
+@app.delete("/api/event/{event_id}")
+async def delete_event(event_id: str):
+    try:
+        payload = {
+            "action": "delete_event",
+            "eventId": event_id
+        }
+        resp = submit_to_sheets(payload)
+        if resp and resp.status_code == 200:
+            return resp.json()
+        return {"success": False, "message": "Failed to delete event"}
+    except Exception as e:
+        logger.error(f"Delete Event Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/visitor/{visitor_id}")
+async def update_visitor(visitor_id: str, request: dict):
+    try:
+        payload = {
+            "action": "update_visitor",
+            "visitorId": visitor_id,
+            "visitorData": request
+        }
+        resp = submit_to_sheets(payload)
+        if resp and resp.status_code == 200:
+            return resp.json()
+        return {"success": False, "message": "Failed to update visitor"}
+    except Exception as e:
+        logger.error(f"Update Visitor Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/proxy-image")
 async def proxy_image(url: str):
     if not url:

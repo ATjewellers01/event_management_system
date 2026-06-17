@@ -64,6 +64,10 @@ function doPost(e) {
       result = getCompanyProfile();
     } else if (action === 'save_company_profile') {
       result = saveCompanyProfile(postData.profileData);
+    } else if (action === 'delete_event') {
+      result = deleteEvent(postData.eventId);
+    } else if (action === 'update_visitor') {
+      result = updateVisitor(postData.visitorId, postData.visitorData);
     } else {
       throw new Error("Invalid action specified: " + action);
     }
@@ -859,4 +863,123 @@ function saveCompanyProfile(profileData) {
   }
   
   return { success: true, message: "Company profile explicitly saved in the Sheet." };
+}
+
+/**
+ * Delete event and all related data (cards and visitors)
+ */
+function deleteEvent(eventId) {
+  if (!eventId) return { success: false, message: "No Event ID provided" };
+
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const eventSheet = ss.getSheetByName("Event Details");
+  const cardSheet = ss.getSheetByName("Event Ai Card");
+  const visitorSheet = ss.getSheetByName("Visitor Details");
+
+  let deletedCount = 0;
+
+  try {
+    // Delete from Event Details sheet
+    if (eventSheet) {
+      const data = eventSheet.getDataRange().getValues();
+      const idCol = 1; // Column B (index 1)
+      for (let i = data.length - 1; i >= 1; i--) {
+        if (String(data[i][idCol]).trim().toLowerCase() === String(eventId).trim().toLowerCase()) {
+          eventSheet.deleteRow(i + 1);
+          deletedCount++;
+        }
+      }
+    }
+
+    // Delete from Event Ai Card sheet
+    if (cardSheet) {
+      const data = cardSheet.getDataRange().getValues();
+      const idCol = 1; // Column B (index 1)
+      for (let i = data.length - 1; i >= 1; i--) {
+        if (String(data[i][idCol]).trim().toLowerCase() === String(eventId).trim().toLowerCase()) {
+          cardSheet.deleteRow(i + 1);
+          deletedCount++;
+        }
+      }
+    }
+
+    // Delete from Visitor Details sheet
+    if (visitorSheet) {
+      const data = visitorSheet.getDataRange().getValues();
+      const idCol = 1; // Column B (index 1)
+      for (let i = data.length - 1; i >= 1; i--) {
+        if (String(data[i][idCol]).trim().toLowerCase() === String(eventId).trim().toLowerCase()) {
+          visitorSheet.deleteRow(i + 1);
+          deletedCount++;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `Event ${eventId} and ${deletedCount} related entries deleted successfully`,
+      deletedCount: deletedCount
+    };
+  } catch (err) {
+    return { success: false, message: "Error deleting event: " + err.message };
+  }
+}
+
+/**
+ * Update visitor details by row index
+ */
+function updateVisitor(visitorId, visitorData) {
+  if (!visitorId || !visitorData) {
+    return { success: false, message: "Invalid visitor data" };
+  }
+
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName("Visitor Details");
+
+  if (!sheet) {
+    return { success: false, message: "Visitor Details sheet not found" };
+  }
+
+  try {
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    let foundRow = -1;
+
+    // Find row by visitorId (which is rowIndex_timestamp or similar)
+    // For now, we'll use a simple approach: find by matching multiple fields
+    const visitorIdParts = visitorId.split('_');
+    const rowIndex = parseInt(visitorIdParts[0]);
+
+    if (isNaN(rowIndex) || rowIndex < 1 || rowIndex >= data.length) {
+      return { success: false, message: "Invalid visitor row" };
+    }
+
+    // Update the specific row
+    let updateRow = data[rowIndex];
+
+    headers.forEach((header, idx) => {
+      const hTrim = String(header).trim().toLowerCase();
+
+      if (hTrim === "customer name") updateRow[idx] = visitorData.customerName || "";
+      if (hTrim === "company name") updateRow[idx] = visitorData.companyName || "";
+      if (hTrim === "mobile no." || hTrim === "mobile") updateRow[idx] = visitorData.mobileNo || "";
+      if (hTrim === "whatsapp no." || hTrim === "whatsapp") updateRow[idx] = visitorData.whatsappNo || "";
+      if (hTrim === "email") updateRow[idx] = visitorData.email || "";
+      if (hTrim === "designation") updateRow[idx] = visitorData.designation || "";
+      if (hTrim === "groups") updateRow[idx] = visitorData.groups || "";
+      if (hTrim === "sub-group") updateRow[idx] = visitorData.subGroup || "";
+      if (hTrim === "state") updateRow[idx] = visitorData.state || "";
+      if (hTrim === "city") updateRow[idx] = visitorData.city || "";
+      if (hTrim === "address") updateRow[idx] = visitorData.address || "";
+      if (hTrim === "gst no." || hTrim === "gst") updateRow[idx] = visitorData.gstNo || "";
+      if (hTrim === "pan no." || hTrim === "pan") updateRow[idx] = visitorData.panNo || "";
+    });
+
+    // Write the updated row back
+    sheet.getRange(rowIndex + 1, 1, 1, updateRow.length).setValues([updateRow]);
+
+    return { success: true, message: "Visitor updated successfully" };
+  } catch (err) {
+    return { success: false, message: "Error updating visitor: " + err.message };
+  }
 }
