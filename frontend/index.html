@@ -558,8 +558,7 @@
                                         <tr>
                                             <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">#</th>
                                             <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">Customer Name</th>
-                                            <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">Mobile No.</th>
-                                            <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">WhatsApp No.</th>
+                                            <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">Mobile / WhatsApp</th>
                                             <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">Source</th>
                                         </tr>
                                     </thead>
@@ -2093,10 +2092,12 @@
                 const customerName = nameParts.join(' ');
 
                 if (customerName) {
+                    // Combine both phone numbers with comma
+                    const combinedPhone = [phone1, phone2].filter(p => p && p.length > 0).join(', ');
+
                     csvParsedData.push({
                         customerName: customerName,
-                        mobileNo: phone1 || '',
-                        whatsappNo: phone2 || '',
+                        mobileWhatsapp: combinedPhone,
                         source: 'Manual'
                     });
                 }
@@ -2124,8 +2125,7 @@
                 tr.innerHTML = `
                     <td style="padding:12px; font-size:12px; color:#64748b; font-weight:700;">${idx + 1}</td>
                     <td style="padding:12px; font-size:12px; color:#1e293b; font-weight:600;">${row.customerName}</td>
-                    <td style="padding:12px; font-size:12px; color:#64748b;">${row.mobileNo || '--'}</td>
-                    <td style="padding:12px; font-size:12px; color:#64748b;">${row.whatsappNo || '--'}</td>
+                    <td style="padding:12px; font-size:12px; color:#64748b;">${row.mobileWhatsapp || '--'}</td>
                     <td style="padding:12px; font-size:12px; color:#64748b;">${row.source}</td>
                 `;
                 tableBody.appendChild(tr);
@@ -2163,8 +2163,8 @@
                                 eventName: window.selectedEventInfo.name,
                                 companyName: '',
                                 customerName: visitor.customerName,
-                                mobileNo: visitor.mobileNo || '',
-                                whatsappNo: visitor.whatsappNo || '',
+                                mobileNo: visitor.mobileWhatsapp || '',
+                                whatsappNo: '',
                                 groups: '',
                                 subGroup: '',
                                 state: '',
