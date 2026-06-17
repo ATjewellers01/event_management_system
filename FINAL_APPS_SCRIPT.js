@@ -68,6 +68,8 @@ function doPost(e) {
       result = deleteEvent(postData.eventId);
     } else if (action === 'update_visitor') {
       result = updateVisitor(postData.visitorId, postData.visitorData);
+    } else if (action === 'update_card') {
+      result = updateCard(postData.cardId, postData.cardData);
     } else {
       throw new Error("Invalid action specified: " + action);
     }
@@ -922,6 +924,61 @@ function deleteEvent(eventId) {
     };
   } catch (err) {
     return { success: false, message: "Error deleting event: " + err.message };
+  }
+}
+
+/**
+ * Update scanned card details by row index
+ */
+function updateCard(cardId, cardData) {
+  if (!cardId || !cardData) {
+    return { success: false, message: "Invalid card data" };
+  }
+
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName("Event Ai Card");
+
+  if (!sheet) {
+    return { success: false, message: "Event Ai Card sheet not found" };
+  }
+
+  try {
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    const cardIdParts = cardId.split('_');
+    const rowIndex = parseInt(cardIdParts[0]);
+
+    if (isNaN(rowIndex) || rowIndex < 1 || rowIndex >= data.length) {
+      return { success: false, message: "Invalid card row" };
+    }
+
+    let updateRow = data[rowIndex];
+
+    headers.forEach((header, idx) => {
+      const hTrim = String(header).trim().toLowerCase();
+
+      if (hTrim === "company name") updateRow[idx] = cardData['Company Name'] || "";
+      if (hTrim === "industry") updateRow[idx] = cardData['Industry'] || "";
+      if (hTrim === "person name") updateRow[idx] = cardData['Person Name'] || "";
+      if (hTrim === "designation") updateRow[idx] = cardData['Designation'] || "";
+      if (hTrim === "phone") updateRow[idx] = cardData['Phone'] || "";
+      if (hTrim === "email") updateRow[idx] = cardData['Email'] || "";
+      if (hTrim === "website") updateRow[idx] = cardData['Website'] || "";
+      if (hTrim === "social media") updateRow[idx] = cardData['Social Media'] || "";
+      if (hTrim === "address") updateRow[idx] = cardData['Address'] || "";
+      if (hTrim === "services") updateRow[idx] = cardData['Services'] || "";
+      if (hTrim === "company size") updateRow[idx] = cardData['Company Size'] || "";
+      if (hTrim === "founded year") updateRow[idx] = cardData['Founded Year'] || "";
+      if (hTrim === "location") updateRow[idx] = cardData['Location'] || "";
+      if (hTrim === "about company") updateRow[idx] = cardData['About Company'] || "";
+    });
+
+    sheet.getRange(rowIndex + 1, 1, 1, updateRow.length).setValues([updateRow]);
+
+    return { success: true, message: "Card updated successfully" };
+  } catch (err) {
+    return { success: false, message: "Error updating card: " + err.message };
   }
 }
 

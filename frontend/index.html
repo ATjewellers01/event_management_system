@@ -276,6 +276,7 @@
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Source Link</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">About Company</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Location</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9; text-align: center;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="db-cards-body">
@@ -1078,6 +1079,9 @@
                                     <td style="padding:15px; font-size:12px;">${srcLink}</td>
                                     <td style="padding:15px; font-size:12px; color:#64748b; max-width:200px; overflow:hidden; text-overflow:ellipsis;">${card['About Company'] || 'N/A'}</td>
                                     <td style="padding:15px; font-size:12px; color:#64748b;">${card['Location'] || 'N/A'}</td>
+                                    <td style="padding:15px; text-align:center;">
+                                        <button onclick="openEditCardModal('${idx}', ${JSON.stringify(card).replace(/"/g, '&quot;')})" style="padding:6px 12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">Edit</button>
+                                    </td>
                                 </tr>
                             `;
                             cBody.insertAdjacentHTML('beforeend', row);
@@ -2218,6 +2222,199 @@
             document.getElementById('csvPreviewSection').classList.add('hidden');
             document.getElementById('csvDragDropArea').style.borderColor = '#93c5fd';
             document.getElementById('csvDragDropArea').style.background = 'rgba(239,246,255,0.5)';
+        };
+
+        // Edit Scanned Card Modal
+        window.openEditCardModal = (cardRowIndex, cardData) => {
+            const modal = document.getElementById('editCardModal');
+            if (!modal) createEditCardModal();
+
+            const m = document.getElementById('editCardModal');
+            m.style.display = 'flex';
+
+            // Populate form with card data
+            document.getElementById('ec_rowIndex').value = cardRowIndex;
+            document.getElementById('ec_company').value = cardData['Company Name'] || '';
+            document.getElementById('ec_industry').value = cardData['Industry'] || '';
+            document.getElementById('ec_person').value = cardData['Person Name'] || '';
+            document.getElementById('ec_designation').value = cardData['Designation'] || '';
+            document.getElementById('ec_phone').value = cardData['Phone'] || '';
+            document.getElementById('ec_email').value = cardData['Email'] || '';
+            document.getElementById('ec_website').value = cardData['Website'] || '';
+            document.getElementById('ec_social').value = cardData['Social Media'] || '';
+            document.getElementById('ec_address').value = cardData['Address'] || '';
+            document.getElementById('ec_services').value = cardData['Services'] || '';
+            document.getElementById('ec_size').value = cardData['Company Size'] || '';
+            document.getElementById('ec_founded').value = cardData['Founded Year'] || '';
+            document.getElementById('ec_location').value = cardData['Location'] || '';
+            document.getElementById('ec_about').value = cardData['About Company'] || '';
+        };
+
+        window.closeEditCardModal = () => {
+            const m = document.getElementById('editCardModal');
+            if (m) m.style.display = 'none';
+        };
+
+        window.submitEditCard = async () => {
+            const rowIndex = document.getElementById('ec_rowIndex').value;
+            const data = {
+                'Company Name': document.getElementById('ec_company').value,
+                'Industry': document.getElementById('ec_industry').value,
+                'Person Name': document.getElementById('ec_person').value,
+                'Designation': document.getElementById('ec_designation').value,
+                'Phone': document.getElementById('ec_phone').value,
+                'Email': document.getElementById('ec_email').value,
+                'Website': document.getElementById('ec_website').value,
+                'Social Media': document.getElementById('ec_social').value,
+                'Address': document.getElementById('ec_address').value,
+                'Services': document.getElementById('ec_services').value,
+                'Company Size': document.getElementById('ec_size').value,
+                'Founded Year': document.getElementById('ec_founded').value,
+                'Location': document.getElementById('ec_location').value,
+                'About Company': document.getElementById('ec_about').value
+            };
+
+            const btn = document.getElementById('ecSubmitBtn');
+            btn.disabled = true;
+
+            try {
+                const r = await fetch(`/api/card/update/${rowIndex}_${Date.now()}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const res = await r.json();
+                if (res.success) {
+                    toastMe('Card updated!', '#10b981');
+                    closeEditCardModal();
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    toastMe('Update failed: ' + res.message, '#ef4444');
+                }
+            } catch (err) {
+                toastMe('Error updating card', '#ef4444');
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        function createEditCardModal() {
+            const modal = document.createElement('div');
+            modal.id = 'editCardModal';
+            modal.style.cssText = `
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(15,23,42,0.4);
+                backdrop-filter: blur(4px);
+                z-index: 300;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                overflow-y: auto;
+                padding: 20px;
+            `;
+
+            modal.innerHTML = `
+                <div style="background:white;border-radius:24px;padding:32px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 70px rgba(0,0,0,0.15);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                        <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0;">Edit Scanned Card</h2>
+                        <button onclick="closeEditCardModal()" style="width:32px;height:32px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:18px;color:#64748b;">×</button>
+                    </div>
+
+                    <form style="display:flex;flex-direction:column;gap:16px;">
+                        <input type="hidden" id="ec_rowIndex">
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Company Name</label>
+                                <input type="text" id="ec_company" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Industry</label>
+                                <input type="text" id="ec_industry" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Person Name</label>
+                                <input type="text" id="ec_person" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Designation</label>
+                                <input type="text" id="ec_designation" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Phone</label>
+                                <input type="tel" id="ec_phone" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Email</label>
+                                <input type="email" id="ec_email" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Website</label>
+                                <input type="url" id="ec_website" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Social Media</label>
+                                <input type="text" id="ec_social" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Address</label>
+                            <input type="text" id="ec_address" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Services</label>
+                                <input type="text" id="ec_services" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Company Size</label>
+                                <input type="text" id="ec_size" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Founded Year</label>
+                                <input type="text" id="ec_founded" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Location</label>
+                                <input type="text" id="ec_location" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">About Company</label>
+                            <textarea id="ec_about" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;min-height:80px;"></textarea>
+                        </div>
+
+                        <div style="display:flex;gap:12px;margin-top:20px;">
+                            <button type="button" id="ecSubmitBtn" onclick="submitEditCard()" style="flex:1;padding:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;">Update Card</button>
+                            <button type="button" onclick="closeEditCardModal()" style="flex:1;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;color:#64748b;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Close on backdrop click
+            modal.onclick = (e) => {
+                if (e.target === modal) closeEditCardModal();
+            };
         };
 
         function createEditVisitorModal() {

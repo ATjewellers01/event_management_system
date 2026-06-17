@@ -223,6 +223,22 @@ async def update_visitor(visitor_id: str, request: dict):
         logger.error(f"Update Visitor Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/card/update/{card_id}")
+async def update_card(card_id: str, request: dict):
+    try:
+        payload = {
+            "action": "update_card",
+            "cardId": card_id,
+            "cardData": request
+        }
+        resp = submit_to_sheets(payload)
+        if resp and resp.status_code == 200:
+            return resp.json()
+        return {"success": False, "message": "Failed to update card"}
+    except Exception as e:
+        logger.error(f"Update Card Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/proxy-image")
 async def proxy_image(url: str):
     if not url:
