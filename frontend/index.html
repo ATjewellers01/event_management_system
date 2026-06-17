@@ -2060,20 +2060,49 @@
         };
 
         function parseCsv(csvText) {
-            const lines = csvText.trim().split('\n');
+            const lines = csvText.trim().split('\n').filter(l => l.trim());
             if (lines.length < 2) {
                 toastMe('CSV must have at least a header and one data row', '#ef4444');
                 return;
             }
 
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            // Better CSV parsing - handle quoted values
+            const parseCSVLine = (line) => {
+                const cols = [];
+                let current = '';
+                let inQuotes = false;
+
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    const nextChar = line[i + 1];
+
+                    if (char === '"') {
+                        if (inQuotes && nextChar === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        cols.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                cols.push(current.trim());
+                return cols;
+            };
+
+            const headerLine = lines[0];
+            const headers = parseCSVLine(headerLine).map(h => h.toLowerCase());
             csvParsedData = [];
 
             // Find column indices
             const firstNameIdx = headers.findIndex(h => h.includes('first'));
             const middleNameIdx = headers.findIndex(h => h.includes('middle'));
             const lastNameIdx = headers.findIndex(h => h.includes('last'));
-            const phone1Idx = headers.findIndex(h => h.includes('phone 1') || h.includes('phone1'));
+            const phone1Idx = headers.findIndex(h => h.includes('phone 1') || h.includes('phone1') || (h.includes('phone') && !h.includes('2')));
             const phone2Idx = headers.findIndex(h => h.includes('phone 2') || h.includes('phone2'));
 
             if (firstNameIdx === -1 || lastNameIdx === -1) {
@@ -2086,7 +2115,7 @@
                 const line = lines[i].trim();
                 if (!line) continue; // Skip empty lines
 
-                const cols = line.split(',').map(c => c.trim());
+                const cols = parseCSVLine(line);
 
                 const firstName = cols[firstNameIdx] || '';
                 const middleName = middleNameIdx >= 0 ? (cols[middleNameIdx] || '') : '';
