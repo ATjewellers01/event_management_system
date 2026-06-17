@@ -435,8 +435,20 @@
                 <div class="max-w-2xl mx-auto py-6">
                     <div class="text-center mb-8">
                         <h3 class="text-2xl font-black text-gray-900 mb-2">Add New Visitor</h3>
-                        <p class="text-gray-500 max-w-md mx-auto font-medium text-sm">Manually enter visitor details. Submissions are saved to the same 'Visitor Details' sheet as the QR form.</p>
+                        <p class="text-gray-500 max-w-md mx-auto font-medium text-sm">Manually enter visitor details or bulk import from CSV. Submissions are saved to the same 'Visitor Details' sheet as the QR form.</p>
                     </div>
+
+                    <!-- Toggle Between Manual & Bulk Import -->
+                    <div class="flex gap-3 justify-center mb-8 bg-gray-100 p-1.5 rounded-2xl w-fit mx-auto">
+                        <button type="button" onclick="switchVisitorMode('manual')" id="mode-manual-btn" class="px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all bg-white text-blue-600 shadow-sm border border-blue-50">
+                            Manual Entry
+                        </button>
+                        <button type="button" onclick="switchVisitorMode('csv')" id="mode-csv-btn" class="px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all text-gray-400 hover:text-gray-600">
+                            Bulk Import CSV
+                        </button>
+                    </div>
+
+                    <!-- Manual Entry Form -->
                     <form id="newVisitorForm" class="space-y-5">
                         <div>
                             <label class="input-label">Company Name <span class="text-red-500">*</span></label>
@@ -514,6 +526,59 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- CSV Bulk Import Section -->
+                    <div id="csvImportSection" class="hidden space-y-6">
+                        <!-- Drag-Drop Area -->
+                        <div id="csvDragDropArea" class="border-2 border-dashed border-blue-300 rounded-3xl p-8 text-center cursor-pointer bg-blue-50/50 transition-all hover:border-blue-500 hover:bg-blue-50"
+                             ondrop="handleCsvDrop(event)"
+                             ondragover="event.preventDefault(); this.style.borderColor='#2563eb'; this.style.background='#eff6ff';"
+                             ondragleave="this.style.borderColor='#93c5fd'; this.style.background='rgba(239,246,255,0.5)';">
+                            <input type="file" id="csvFileInput" class="hidden" accept=".csv" onchange="handleCsvFile(this.files[0])">
+                            <svg class="w-16 h-16 text-blue-500 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <p class="text-lg font-bold text-gray-800 mb-1">Drop CSV File Here</p>
+                            <p class="text-sm text-gray-500 mb-4">or <button type="button" onclick="document.getElementById('csvFileInput').click()" class="text-blue-600 font-bold hover:underline">click to browse</button></p>
+                            <p class="text-xs text-gray-400 uppercase tracking-widest font-bold">Columns: First Name, Middle Name, Last Name, Phone 1, Phone 2</p>
+                        </div>
+
+                        <!-- Preview & Import -->
+                        <div id="csvPreviewSection" class="hidden space-y-4">
+                            <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                                <p class="text-sm font-bold text-blue-900">
+                                    📊 Ready to import: <span id="csvRowCount" class="font-black text-blue-600">0</span> visitors
+                                </p>
+                            </div>
+
+                            <!-- Preview Table -->
+                            <div class="border border-gray-200 rounded-2xl overflow-hidden max-h-96 overflow-y-auto">
+                                <table style="width:100%; border-collapse: collapse;">
+                                    <thead style="background:#f8fafc; position:sticky; top:0;">
+                                        <tr>
+                                            <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">#</th>
+                                            <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">Customer Name</th>
+                                            <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">Phone</th>
+                                            <th style="padding:12px; text-align:left; font-size:11px; font-weight:800; text-transform:uppercase; color:#64748b; border-bottom:1px solid #e2e8f0;">Source</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="csvPreviewTable">
+                                        <!-- Rows injected here -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex gap-3">
+                                <button type="button" onclick="importCsvVisitors()" id="csvImportBtn" class="flex-1 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all">
+                                    ✅ Import All Visitors
+                                </button>
+                                <button type="button" onclick="resetCsvImport()" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-2xl font-bold hover:bg-gray-200 transition-all">
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1936,6 +2001,222 @@
             } finally {
                 btn.disabled = false;
             }
+        };
+
+        // CSV Import Functions
+        let csvParsedData = [];
+
+        window.switchVisitorMode = (mode) => {
+            const manualForm = document.getElementById('newVisitorForm');
+            const csvSection = document.getElementById('csvImportSection');
+            const manualBtn = document.getElementById('mode-manual-btn');
+            const csvBtn = document.getElementById('mode-csv-btn');
+
+            if (mode === 'manual') {
+                manualForm.classList.remove('hidden');
+                csvSection.classList.add('hidden');
+                manualBtn.className = 'px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all bg-white text-blue-600 shadow-sm border border-blue-50';
+                csvBtn.className = 'px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all text-gray-400 hover:text-gray-600';
+            } else {
+                manualForm.classList.add('hidden');
+                csvSection.classList.remove('hidden');
+                csvBtn.className = 'px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all bg-white text-blue-600 shadow-sm border border-blue-50';
+                manualBtn.className = 'px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all text-gray-400 hover:text-gray-600';
+            }
+        };
+
+        window.handleCsvDrop = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleCsvFile(files[0]);
+            }
+        };
+
+        window.handleCsvFile = (file) => {
+            if (!file || !file.name.endsWith('.csv')) {
+                toastMe('Please upload a valid CSV file', '#ef4444');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const csv = e.target.result;
+                    parseCsv(csv);
+                } catch (err) {
+                    toastMe('Error reading CSV: ' + err.message, '#ef4444');
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        function parseCsv(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) {
+                toastMe('CSV must have at least a header and one data row', '#ef4444');
+                return;
+            }
+
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            csvParsedData = [];
+
+            // Find column indices
+            const firstNameIdx = headers.findIndex(h => h.includes('first'));
+            const middleNameIdx = headers.findIndex(h => h.includes('middle'));
+            const lastNameIdx = headers.findIndex(h => h.includes('last'));
+            const phone1Idx = headers.findIndex(h => h.includes('phone 1') || h.includes('phone1'));
+            const phone2Idx = headers.findIndex(h => h.includes('phone 2') || h.includes('phone2'));
+
+            if (firstNameIdx === -1 || lastNameIdx === -1) {
+                toastMe('CSV must have "First Name" and "Last Name" columns', '#ef4444');
+                return;
+            }
+
+            // Parse data rows
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue; // Skip empty lines
+
+                const cols = line.split(',').map(c => c.trim());
+
+                const firstName = cols[firstNameIdx] || '';
+                const middleName = middleNameIdx >= 0 ? (cols[middleNameIdx] || '') : '';
+                const lastName = cols[lastNameIdx] || '';
+                const phone1 = phone1Idx >= 0 ? (cols[phone1Idx] || '') : '';
+                const phone2 = phone2Idx >= 0 ? (cols[phone2Idx] || '') : '';
+
+                // Combine names
+                const nameParts = [firstName, middleName, lastName].filter(n => n && n.length > 0);
+                const customerName = nameParts.join(' ');
+
+                // Get primary phone
+                const phone = phone1 || phone2 || '';
+
+                if (customerName) {
+                    csvParsedData.push({
+                        customerName: customerName,
+                        phone: phone,
+                        source: 'Manual'
+                    });
+                }
+            }
+
+            if (csvParsedData.length === 0) {
+                toastMe('No valid data found in CSV', '#ef4444');
+                return;
+            }
+
+            displayCsvPreview();
+        }
+
+        function displayCsvPreview() {
+            const countEl = document.getElementById('csvRowCount');
+            const tableBody = document.getElementById('csvPreviewTable');
+            const previewSection = document.getElementById('csvPreviewSection');
+
+            countEl.innerText = csvParsedData.length;
+            tableBody.innerHTML = '';
+
+            csvParsedData.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #f1f5f9';
+                tr.innerHTML = `
+                    <td style="padding:12px; font-size:12px; color:#64748b; font-weight:700;">${idx + 1}</td>
+                    <td style="padding:12px; font-size:12px; color:#1e293b; font-weight:600;">${row.customerName}</td>
+                    <td style="padding:12px; font-size:12px; color:#64748b;">${row.phone || '--'}</td>
+                    <td style="padding:12px; font-size:12px; color:#64748b;">${row.source}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            previewSection.classList.remove('hidden');
+            toastMe(`✅ CSV parsed: ${csvParsedData.length} visitors ready to import`, '#10b981');
+        }
+
+        window.importCsvVisitors = async () => {
+            if (csvParsedData.length === 0) {
+                toastMe('No data to import', '#ef4444');
+                return;
+            }
+
+            if (!window.selectedEventInfo) {
+                toastMe('No event selected', '#ef4444');
+                return;
+            }
+
+            const btn = document.getElementById('csvImportBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span id="importBtnText">Importing...</span>';
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const visitor of csvParsedData) {
+                    try {
+                        const payload = {
+                            action: "save_visitor_and_get_contact",
+                            visitorData: {
+                                eventId: window.selectedEventInfo.id,
+                                eventName: window.selectedEventInfo.name,
+                                companyName: '',
+                                customerName: visitor.customerName,
+                                whatsappNo: '',
+                                groups: '',
+                                subGroup: '',
+                                state: '',
+                                city: '',
+                                address: '',
+                                gstNo: '',
+                                panNo: '',
+                                mobileNo: visitor.phone || '',
+                                source: visitor.source
+                            }
+                        };
+
+                        const r = await fetch('/submit-visitor-and-get-contact', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const res = await r.json();
+                        if (res.success) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                        }
+                    } catch (err) {
+                        console.error('Import error for visitor:', visitor, err);
+                        errorCount++;
+                    }
+                }
+
+                if (successCount > 0) {
+                    toastMe(`✅ Imported ${successCount} visitors! ${errorCount > 0 ? `(${errorCount} failed)` : ''}`, '#10b981');
+                    resetCsvImport();
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    toastMe('Failed to import visitors', '#ef4444');
+                }
+            } catch (err) {
+                toastMe('Import error: ' + err.message, '#ef4444');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✅ Import All Visitors';
+            }
+        };
+
+        window.resetCsvImport = () => {
+            csvParsedData = [];
+            document.getElementById('csvFileInput').value = '';
+            document.getElementById('csvPreviewSection').classList.add('hidden');
+            document.getElementById('csvDragDropArea').style.borderColor = '#93c5fd';
+            document.getElementById('csvDragDropArea').style.background = 'rgba(239,246,255,0.5)';
         };
 
         function createEditVisitorModal() {
