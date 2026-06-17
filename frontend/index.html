@@ -2161,44 +2161,53 @@
                 let successCount = 0;
                 let errorCount = 0;
 
-                for (const visitor of csvParsedData) {
-                    try {
-                        const payload = {
-                            action: "save_visitor_and_get_contact",
-                            visitorData: {
-                                eventId: window.selectedEventInfo.id,
-                                eventName: window.selectedEventInfo.name,
-                                companyName: '',
-                                customerName: visitor.customerName,
-                                mobileNo: visitor.mobileWhatsapp || '',
-                                whatsappNo: '',
-                                groups: '',
-                                subGroup: '',
-                                state: '',
-                                city: '',
-                                address: '',
-                                gstNo: '',
-                                panNo: '',
-                                source: visitor.source
-                            }
-                        };
+                // Split into batches of 10 for better performance
+                const batchSize = 10;
+                for (let i = 0; i < csvParsedData.length; i += batchSize) {
+                    const batch = csvParsedData.slice(i, i + batchSize);
 
-                        const r = await fetch('/submit-visitor-and-get-contact', {
+                    // Process batch in parallel
+                    const promises = batch.map(visitor =>
+                        fetch('/submit-visitor-and-get-contact', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const res = await r.json();
-                        if (res.success) {
-                            successCount++;
-                        } else {
+                            body: JSON.stringify({
+                                action: "save_visitor_and_get_contact",
+                                visitorData: {
+                                    eventId: window.selectedEventInfo.id,
+                                    eventName: window.selectedEventInfo.name,
+                                    companyName: '',
+                                    customerName: visitor.customerName,
+                                    mobileNo: visitor.mobileWhatsapp || '',
+                                    whatsappNo: '',
+                                    groups: '',
+                                    subGroup: '',
+                                    state: '',
+                                    city: '',
+                                    address: '',
+                                    gstNo: '',
+                                    panNo: '',
+                                    source: visitor.source
+                                }
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success) successCount++;
+                            else errorCount++;
+                        })
+                        .catch(err => {
+                            console.error('Import error:', err);
                             errorCount++;
-                        }
-                    } catch (err) {
-                        console.error('Import error for visitor:', visitor, err);
-                        errorCount++;
-                    }
+                        })
+                    );
+
+                    // Wait for batch to complete
+                    await Promise.all(promises);
+
+                    // Update progress
+                    const progress = Math.min(i + batchSize, csvParsedData.length);
+                    btn.innerHTML = `<span>Importing... ${progress}/${csvParsedData.length}</span>`;
                 }
 
                 if (successCount > 0) {
