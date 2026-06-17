@@ -535,13 +535,13 @@
                              ondrop="handleCsvDrop(event)"
                              ondragover="event.preventDefault(); this.style.borderColor='#2563eb'; this.style.background='#eff6ff';"
                              ondragleave="this.style.borderColor='#93c5fd'; this.style.background='rgba(239,246,255,0.5)';">
-                            <input type="file" id="csvFileInput" class="hidden" accept=".csv" onchange="handleCsvFile(this.files[0])">
+                            <input type="file" id="csvFileInput" class="hidden" accept=".csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange="handleCsvFile(this.files[0])">
                             <svg class="w-16 h-16 text-blue-500 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
-                            <p class="text-lg font-bold text-gray-800 mb-1">Drop CSV File Here</p>
+                            <p class="text-lg font-bold text-gray-800 mb-1">Drop CSV or XLSX File Here</p>
                             <p class="text-sm text-gray-500 mb-4">or <button type="button" onclick="document.getElementById('csvFileInput').click()" class="text-blue-600 font-bold hover:underline">click to browse</button></p>
-                            <p class="text-xs text-gray-400 uppercase tracking-widest font-bold">Columns: First Name, Middle Name, Last Name, Phone 1, Phone 2</p>
+                            <p class="text-xs text-gray-400 uppercase tracking-widest font-bold">Supported: CSV, XLSX | Columns: First Name, Middle Name, Last Name, Phone 1, Phone 2</p>
                         </div>
 
                         <!-- Preview & Import -->
@@ -2042,21 +2042,46 @@
         };
 
         window.handleCsvFile = (file) => {
-            if (!file || !file.name.endsWith('.csv')) {
-                toastMe('Please upload a valid CSV file', '#ef4444');
+            if (!file) {
+                toastMe('Please upload a file', '#ef4444');
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const csv = e.target.result;
-                    parseCsv(csv);
-                } catch (err) {
-                    toastMe('Error reading CSV: ' + err.message, '#ef4444');
-                }
-            };
-            reader.readAsText(file);
+            const isCSV = file.name.endsWith('.csv');
+            const isXLSX = file.name.endsWith('.xlsx') || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+            if (!isCSV && !isXLSX) {
+                toastMe('Please upload CSV or XLSX file', '#ef4444');
+                return;
+            }
+
+            if (isCSV) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const csv = e.target.result;
+                        parseCsv(csv);
+                    } catch (err) {
+                        toastMe('Error reading CSV: ' + err.message, '#ef4444');
+                    }
+                };
+                reader.readAsText(file);
+            } else if (isXLSX) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheet];
+                        const csv = XLSX.utils.sheet_to_csv(worksheet);
+                        parseCsv(csv);
+                    } catch (err) {
+                        toastMe('Error reading XLSX: ' + err.message, '#ef4444');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
         };
 
         function parseCsv(csvText) {
