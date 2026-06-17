@@ -2085,7 +2085,15 @@
         };
 
         function parseCsv(csvText) {
-            const lines = csvText.trim().split('\n').filter(l => l.trim());
+            let lines = csvText.trim().split('\n');
+
+            // Remove completely empty lines but preserve data
+            lines = lines.filter((l, idx) => {
+                const trimmed = l.trim();
+                // Keep header and non-empty data rows
+                return idx === 0 || (trimmed.length > 0);
+            });
+
             if (lines.length < 2) {
                 toastMe('CSV must have at least a header and one data row', '#ef4444');
                 return;
@@ -2123,24 +2131,36 @@
             const headers = parseCSVLine(headerLine).map(h => h.toLowerCase());
             csvParsedData = [];
 
-            // Find column indices
+            // Debug: log headers
+            console.log('Headers found:', headers);
+
+            // Find column indices - more flexible matching
             const firstNameIdx = headers.findIndex(h => h.includes('first'));
             const middleNameIdx = headers.findIndex(h => h.includes('middle'));
             const lastNameIdx = headers.findIndex(h => h.includes('last'));
-            const phone1Idx = headers.findIndex(h => h.includes('phone 1') || h.includes('phone1') || (h.includes('phone') && !h.includes('2')));
-            const phone2Idx = headers.findIndex(h => h.includes('phone 2') || h.includes('phone2'));
+            const phone1Idx = headers.findIndex(h => {
+                return (h.includes('phone') && h.includes('1')) ||
+                       (h.includes('phone') && !h.includes('2') && !h.includes('whatsapp'));
+            });
+            const phone2Idx = headers.findIndex(h => h.includes('phone') && h.includes('2'));
 
             if (firstNameIdx === -1 || lastNameIdx === -1) {
                 toastMe('CSV must have "First Name" and "Last Name" columns', '#ef4444');
                 return;
             }
 
+            console.log('Column indices:', {firstNameIdx, middleNameIdx, lastNameIdx, phone1Idx, phone2Idx});
+
             // Parse data rows
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
-                if (!line) continue; // Skip empty lines
+                if (!line || line === ',' || !line.match(/\S/)) continue; // Skip completely empty lines
 
                 const cols = parseCSVLine(line);
+
+                // Validate row has data
+                const hasData = cols.some((c, idx) => c && idx !== 0);
+                if (!hasData) continue;
 
                 const firstName = cols[firstNameIdx] || '';
                 const middleName = middleNameIdx >= 0 ? (cols[middleNameIdx] || '') : '';
