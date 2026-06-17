@@ -192,7 +192,7 @@ async def submit_visitor_and_get_contact(request: dict):
         logger.error(f"Submit Visitor Error: {e}")
         return {"success": False, "message": str(e)}
 
-@app.delete("/api/event/{event_id}")
+@app.post("/api/event/delete/{event_id}")
 async def delete_event(event_id: str):
     try:
         payload = {
@@ -207,7 +207,7 @@ async def delete_event(event_id: str):
         logger.error(f"Delete Event Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/visitor/{visitor_id}")
+@app.post("/api/visitor/update/{visitor_id}")
 async def update_visitor(visitor_id: str, request: dict):
     try:
         payload = {

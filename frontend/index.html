@@ -1433,6 +1433,7 @@
                 toast.classList.add('show');
                 setTimeout(() => toast.classList.remove('show'), 5000);
             }
+            window.toastMe = toastMe; // Make globally accessible
 
             function work() {
                 btn.disabled = true; 
@@ -1909,7 +1910,7 @@
             const btn = event?.target?.closest('button');
             if (btn) btn.disabled = true;
 
-            fetch(`/api/event/${eventId}`, { method: 'DELETE' })
+            fetch(`/api/event/delete/${eventId}`, { method: 'POST' })
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
@@ -1983,8 +1984,8 @@
             btn.disabled = true;
 
             try {
-                const r = await fetch(`/api/visitor/${rowIndex}_${Date.now()}`, {
-                    method: 'PUT',
+                const r = await fetch(`/api/visitor/update/${rowIndex}_${Date.now()}`, {
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
