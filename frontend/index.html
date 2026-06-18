@@ -2154,34 +2154,37 @@
             // Parse data rows
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
-                if (!line || line === ',' || !line.match(/\S/)) continue; // Skip completely empty lines
+
+                // Skip empty lines - multiple ways to detect
+                if (!line || line === ',' || !line.match(/\S/)) continue;
 
                 const cols = parseCSVLine(line);
 
-                // Validate row has data
-                const hasData = cols.some((c, idx) => c && idx !== 0);
-                if (!hasData) continue;
+                // Extract values
+                const firstName = (cols[firstNameIdx] || '').trim();
+                const middleName = middleNameIdx >= 0 ? (cols[middleNameIdx] || '').trim() : '';
+                const lastName = (cols[lastNameIdx] || '').trim();
+                const phone1 = phone1Idx >= 0 ? (cols[phone1Idx] || '').trim() : '';
+                const phone2 = phone2Idx >= 0 ? (cols[phone2Idx] || '').trim() : '';
 
-                const firstName = cols[firstNameIdx] || '';
-                const middleName = middleNameIdx >= 0 ? (cols[middleNameIdx] || '') : '';
-                const lastName = cols[lastNameIdx] || '';
-                const phone1 = phone1Idx >= 0 ? (cols[phone1Idx] || '') : '';
-                const phone2 = phone2Idx >= 0 ? (cols[phone2Idx] || '') : '';
+                // Skip if no first name or last name
+                if (!firstName || !lastName) {
+                    console.log(`Skipping row ${i+1}: missing first or last name`);
+                    continue;
+                }
 
                 // Combine names
                 const nameParts = [firstName, middleName, lastName].filter(n => n && n.length > 0);
                 const customerName = nameParts.join(' ');
 
-                if (customerName) {
-                    // Combine both phone numbers with comma
-                    const combinedPhone = [phone1, phone2].filter(p => p && p.length > 0).join(', ');
+                // Combine both phone numbers with comma
+                const combinedPhone = [phone1, phone2].filter(p => p && p.length > 0).join(', ');
 
-                    csvParsedData.push({
-                        customerName: customerName,
-                        mobileWhatsapp: combinedPhone,
-                        source: 'Manual'
-                    });
-                }
+                csvParsedData.push({
+                    customerName: customerName,
+                    mobileWhatsapp: combinedPhone,
+                    source: 'Manual'
+                });
             }
 
             if (csvParsedData.length === 0) {
