@@ -1882,8 +1882,15 @@
                     if (res.success) {
                         toastMe(`Event "${eventName}" deleted!`, '#10b981');
                         setTimeout(() => {
-                            location.reload();
-                        }, 1000);
+                            // If event detail is open, go back to event list first
+                            if (window.selectedEventInfo?.id === eventId) {
+                                showEventList();
+                            }
+                            // Then reload to refresh the list
+                            setTimeout(() => {
+                                location.reload();
+                            }, 500);
+                        }, 800);
                     } else {
                         toastMe('Delete failed: ' + res.message, '#ef4444');
                     }
