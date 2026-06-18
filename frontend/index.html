@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeadScan Pro | Intelligent Business Intelligence</title>
+    <script>
+        // Suppress Tailwind CDN warning in development
+        if (typeof window !== 'undefined') {
+            const originalWarn = console.warn;
+            console.warn = function(...args) {
+                if (args[0] && args[0].includes('cdn.tailwindcss.com')) {
+                    return; // Suppress this warning
+                }
+                originalWarn.apply(console, args);
+            };
+        }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1453,7 +1465,8 @@
             const eventBtnLoader = document.getElementById('eventBtnLoader');
 
             openEventBtn.onclick = () => eventModal.classList.add('active');
-            closeEventModal.onclick = () => {
+
+            window.closeEventModal = () => {
                 eventModal.classList.remove('active');
                 setTimeout(() => {
                     eventSuccessOverlay.classList.remove('active');
@@ -1467,6 +1480,8 @@
                     fetchEvents();
                 }, 400);
             };
+
+            closeEventModal.onclick = window.closeEventModal;
 
             addMemberBtn.onclick = () => {
                 const id = Date.now();
@@ -1623,7 +1638,8 @@
                     if (res?.success) {
                         eventBtnLoader.classList.add('hidden');
                         eventBtnText.innerText = 'Event Created!';
-                        document.getElementById('saveEventBtn').style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                        const submitBtn = document.getElementById('submitEventBtn');
+                        if (submitBtn) submitBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
                     } else {
                         eventBtnText.classList.remove('hidden');
                         eventBtnText.innerText = 'Create Event';
