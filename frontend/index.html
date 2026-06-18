@@ -1860,11 +1860,8 @@
                     if (res.success) {
                         toastMe(`Event "${eventName}" deleted!`, '#10b981');
                         setTimeout(() => {
-                            if (window.selectedEventInfo?.id === eventId) {
-                                showEventList();
-                            }
-                            fetchEvents();
-                        }, 800);
+                            location.reload();
+                        }, 1000);
                     } else {
                         toastMe('Delete failed: ' + res.message, '#ef4444');
                         if (btn) btn.disabled = false;
