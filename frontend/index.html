@@ -1255,7 +1255,7 @@
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest" style="pointer-events:none">${ev.id}</span>
-                                        <button onclick="event.stopPropagation(); deleteEventWithConfirm('${ev.id}', '${ev.name}')" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Delete event">
+                                        <button onclick="deleteEventWithConfirm('${ev.id}', '${ev.name}'); return false;" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Delete event" style="pointer-events:auto;">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                         </button>
                                     </div>
@@ -1851,9 +1851,6 @@
             const msg = `Delete "${eventName}" and ALL related data (cards, visitors)?\n\nThis cannot be undone.`;
             if (!confirm(msg)) return;
 
-            const btn = event?.target?.closest('button');
-            if (btn) btn.disabled = true;
-
             fetch(`/api/event/delete/${eventId}`, { method: 'POST' })
                 .then(r => r.json())
                 .then(res => {
@@ -1864,12 +1861,11 @@
                         }, 1000);
                     } else {
                         toastMe('Delete failed: ' + res.message, '#ef4444');
-                        if (btn) btn.disabled = false;
                     }
                 })
                 .catch(err => {
                     toastMe('Error deleting event', '#ef4444');
-                    if (btn) btn.disabled = false;
+                    console.error('Delete error:', err);
                 });
         };
 
