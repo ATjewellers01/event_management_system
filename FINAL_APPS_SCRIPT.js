@@ -555,12 +555,22 @@ function saveLeadData(leadData) {
 }
 
 /**
- * Save new Visitor from QR code form and return Event Contact Info for vCard 
+ * Save new Visitor from QR code form and return Event Contact Info for vCard
  */
 function saveVisitorAndGetContact(visitorData) {
   const SHEET_NAME = "Visitor Details";
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  
+
+  // Validate eventId early - prevents N/A entries in sheets
+  if (!visitorData.eventId || String(visitorData.eventId).trim() === '') {
+    Logger.log("⚠️ Warning: No eventId provided in visitor data. Payload: " + JSON.stringify(visitorData));
+    return {
+      success: false,
+      message: "Event ID is missing. Please use the correct QR code or link.",
+      contactInfo: null
+    };
+  }
+
   // 1. Fetch the Event Organizer contact info first to get Event Name
   const eventSheet = ss.getSheetByName("Event Details");
   let contactInfo = null;

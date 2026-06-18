@@ -230,6 +230,7 @@
         let eventDataCache = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log("EventID from URL:", eventId);
             if (!eventId || eventId === 'visitor-form') {
                 document.getElementById('eventName').innerText = "Invalid Event Link";
                 document.getElementById('submitBtn').disabled = true;
@@ -258,9 +259,16 @@
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             const loader = document.getElementById('loader');
-            
+
             btn.disabled = true;
             loader.classList.add('active');
+
+            if (!eventId || eventId === 'visitor-form') {
+                alert('Invalid event link. Please use the correct QR code or link.');
+                btn.disabled = false;
+                loader.classList.remove('active');
+                return;
+            }
 
             const payload = {
                 eventId: eventId,
@@ -277,6 +285,8 @@
                 panNo: document.getElementById('v_pan').value,
                 mobileNo: document.getElementById('v_mobile').value
             };
+
+            console.log('Submitting visitor data:', payload);
 
             try {
                 // Submit Visitor Data & Fetch Event Contact Info in one call
