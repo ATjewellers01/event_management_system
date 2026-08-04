@@ -208,16 +208,19 @@
 
                 <div class="w-px h-8 bg-gray-100 mx-1 hide-mobile"></div>
 
-                <a id="globalDatabaseBtn" href="/leads" title="Global Leads Database" class="w-10 h-10 flex items-center justify-center bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-all active:scale-95 text-gray-600 hover:text-blue-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.58 4 8 4s8-1.79 8-4M4 7c0-2.21 3.58-4 8-4s8 1.79 8 4m0 5c0 2.21-3.58 4-8 4s-8-1.79-8-4"></path></svg>
+                <a id="globalDatabaseBtn" href="/leads" title="Global Leads Database" class="h-10 flex items-center gap-2 px-4 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-all active:scale-95 text-gray-600 hover:text-blue-600">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.58 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.58 4 8 4s8-1.79 8-4M4 7c0-2.21 3.58-4 8-4s8 1.79 8 4m0 5c0 2.21-3.58 4-8 4s-8-1.79-8-4"></path></svg>
+                    <span class="hide-mobile text-[11px] font-black uppercase tracking-widest">Leads</span>
                 </a>
 
-                <button id="eventDatabaseBtn" title="Event Insights" class="hidden w-10 h-10 items-center justify-center bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-all active:scale-95 text-gray-600 hover:text-emerald-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <button id="eventDatabaseBtn" title="Event Insights" class="hidden h-10 items-center gap-2 px-4 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-50 transition-all active:scale-95 text-gray-600 hover:text-emerald-600">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    <span class="hide-mobile text-[11px] font-black uppercase tracking-widest">Customer Data</span>
                 </button>
 
-                <button id="openProfileBtn" onclick="openProfileDrawer()" title="Company Profile" class="w-10 h-10 flex items-center justify-center bg-indigo-50 border border-indigo-100 rounded-full shadow-sm hover:bg-indigo-100 transition-all active:scale-95 text-indigo-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                <button id="openProfileBtn" onclick="openProfileDrawer()" title="Company Profile" class="h-10 flex items-center gap-2 px-4 bg-indigo-50 border border-indigo-100 rounded-full shadow-sm hover:bg-indigo-100 transition-all active:scale-95 text-indigo-600">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    <span class="hide-mobile text-[11px] font-black uppercase tracking-widest">Profile</span>
                 </button>
             </div>
         </div>
@@ -292,6 +295,7 @@
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Source Link</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">About Company</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Location</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Tag</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9; text-align: center;">Actions</th>
                         </tr>
                     </thead>
@@ -310,13 +314,12 @@
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Company</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Mobile / WhatsApp</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Group</th>
-                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Sub-Group</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Pincode</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">State</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">City</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Address</th>
-                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">GST No.</th>
-                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">PAN No.</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Source</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Tag</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9; text-align: center;">Actions</th>
                         </tr>
                     </thead>
@@ -468,11 +471,11 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="input-label">WhatsApp No.</label>
-                                <input type="tel" id="nv_whatsapp" class="input-field">
+                                <input type="tel" id="nv_whatsapp" class="input-field" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="Enter a 10-digit phone number">
                             </div>
                             <div>
                                 <label class="input-label">Mobile No.</label>
-                                <input type="tel" id="nv_mobile" class="input-field">
+                                <input type="tel" id="nv_mobile" class="input-field" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="Enter a 10-digit phone number">
                             </div>
                         </div>
                         <div>
@@ -489,18 +492,24 @@
                                 <option>Supplier</option>
                             </select>
                         </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="input-label">Tag</label>
+                                <select id="nv_tag_category" class="input-field" onchange="onNewVisitorTagCategoryChange()">
+                                    <option value="">Select</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="input-label">&nbsp;</label>
+                                <select id="nv_tag_sub" class="input-field">
+                                    <option value="">Select</option>
+                                </select>
+                            </div>
+                        </div>
                         <div>
-                            <label class="input-label">Sub-Group <span class="text-red-500">*</span></label>
-                            <select id="nv_subgroup" class="input-field" required>
-                                <option value="">Select sub-group</option>
-                                <option>Gold</option>
-                                <option>Gold Mini</option>
-                                <option>Silver</option>
-                                <option>Platinum</option>
-                                <option>PC Aware</option>
-                                <option>PC Unaware</option>
-                                <option>Lost Customer</option>
-                            </select>
+                            <label class="input-label">Pincode</label>
+                            <input type="text" id="nv_pincode" class="input-field" inputmode="numeric" pattern="[0-9]{6}" maxlength="6">
+                            <p id="nv_pincode_status" class="text-xs text-gray-400 mt-1"></p>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -515,16 +524,6 @@
                         <div>
                             <label class="input-label">Address <span class="text-red-500">*</span></label>
                             <input type="text" id="nv_address" class="input-field" required>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="input-label">GST No.</label>
-                                <input type="text" id="nv_gst" class="input-field">
-                            </div>
-                            <div>
-                                <label class="input-label">PAN No.</label>
-                                <input type="text" id="nv_pan" class="input-field">
-                            </div>
                         </div>
                         <div class="pt-2">
                             <button type="submit" id="nvSubmitBtn" class="btn-primary w-full" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;padding:14px;border-radius:14px;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;border:none;cursor:pointer;">
@@ -886,6 +885,165 @@
             let dbCurrentVisitors = [];
             let dbCurrentEventName = '';
 
+            // Tag taxonomy: top-level category -> sub-values (empty array = no second step).
+            const TAG_CATEGORIES = {
+                'PC': ['Aware', 'Unaware'],
+                'EC': ['Gold', 'Gold Mini', 'Silver', 'Platinum'],
+                'UK': [],
+                'Lost Customer': []
+            };
+
+            // Shared field validators used across New Visitor / Edit Visitor forms.
+            // Empty values are allowed through (fields are optional) — this only
+            // rejects a NON-empty value that doesn't match the expected shape.
+            function validatePhoneIfPresent(value) {
+                if (!value) return true;
+                return /^\d{10}$/.test(value);
+            }
+            function validatePincodeIfPresent(value) {
+                if (!value) return true;
+                return /^\d{6}$/.test(value);
+            }
+            function validateEmailIfPresent(value) {
+                if (!value) return true;
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+            }
+
+            // Pincode -> City/State autofill via api.postalpincode.in (free, no key).
+            // City/State stay editable always — a miss or network failure just
+            // falls back to manual entry, it never blocks the form.
+            function wirePincodeAutofill(pincodeId, cityId, stateId, statusId) {
+                const pinInput = document.getElementById(pincodeId);
+                const cityInput = document.getElementById(cityId);
+                const stateInput = document.getElementById(stateId);
+                const statusEl = statusId ? document.getElementById(statusId) : null;
+                if (!pinInput) return;
+
+                let lastRequestId = 0;
+
+                pinInput.addEventListener('input', async () => {
+                    const pin = pinInput.value.trim();
+                    const requestId = ++lastRequestId;
+                    const isStale = () => requestId !== lastRequestId;
+
+                    if (!/^\d{6}$/.test(pin)) {
+                        if (statusEl) statusEl.textContent = '';
+                        return;
+                    }
+
+                    if (statusEl) statusEl.textContent = 'Looking up…';
+                    try {
+                        const r = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+                        const data = await r.json();
+                        if (isStale()) return;
+
+                        const result = Array.isArray(data) ? data[0] : null;
+                        if (result && result.Status === 'Success' && result.PostOffice && result.PostOffice.length) {
+                            const po = result.PostOffice[0];
+                            if (cityInput) cityInput.value = po.District || cityInput.value;
+                            if (stateInput) stateInput.value = po.State || stateInput.value;
+                            if (statusEl) statusEl.textContent = '';
+                        } else {
+                            if (statusEl) statusEl.textContent = 'PIN not found — enter city/state manually';
+                        }
+                    } catch (e) {
+                        if (isStale()) return;
+                        if (statusEl) statusEl.textContent = 'PIN not found — enter city/state manually';
+                    }
+                });
+            }
+
+            // Stored tag values look like "PC - Aware" / "EC - Gold" / "UK" / "Lost Customer".
+            function parseTagValue(tag) {
+                if (!tag) return { category: '', sub: '' };
+                const parts = String(tag).split(' - ');
+                return { category: parts[0] || '', sub: parts[1] || '' };
+            }
+
+            function buildTagCell(kind, idx, currentTag) {
+                const { category, sub } = parseTagValue(currentTag);
+                const catOptions = ['<option value="">Select</option>']
+                    .concat(Object.keys(TAG_CATEGORIES).map(c =>
+                        `<option value="${c}" ${c === category ? 'selected' : ''}>${c}</option>`
+                    )).join('');
+                const subValues = TAG_CATEGORIES[category] || [];
+                const subOptions = ['<option value="">Select</option>']
+                    .concat(subValues.map(s =>
+                        `<option value="${s}" ${s === sub ? 'selected' : ''}>${s}</option>`
+                    )).join('');
+                const subDisplay = subValues.length ? '' : 'display:none;';
+                return `
+                    <div style="display:flex; gap:6px;" data-tag-cell="${kind}-${idx}">
+                        <select onchange="onTagCategoryChange('${kind}', ${idx}, this)" style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;">${catOptions}</select>
+                        <select onchange="onTagSubChange('${kind}', ${idx}, this)" style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;${subDisplay}">${subOptions}</select>
+                    </div>
+                `;
+            }
+
+            async function saveTag(kind, idx, tagValue) {
+                const list = kind === 'card' ? dbCurrentCards : dbCurrentVisitors;
+                const row = list[idx];
+                if (!row) return;
+                const endpoint = kind === 'card' ? '/api/card/update' : '/api/visitor/update';
+                const payload = kind === 'card' ? { 'Tag': tagValue } : { tag: tagValue };
+                try {
+                    const r = await fetch(`${endpoint}/${idx}_${Date.now()}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const res = await r.json();
+                    if (res.success) {
+                        row['Tag'] = tagValue;
+                        toastMe('Tag saved', '#10b981');
+                    } else {
+                        toastMe('Failed to save tag: ' + res.message, '#ef4444');
+                    }
+                } catch (e) {
+                    toastMe('Error saving tag', '#ef4444');
+                }
+            }
+
+            window.onTagCategoryChange = (kind, idx, selectEl) => {
+                const category = selectEl.value;
+                const cell = document.querySelector(`[data-tag-cell="${kind}-${idx}"]`);
+                const subSelect = cell.querySelectorAll('select')[1];
+                const subValues = TAG_CATEGORIES[category] || [];
+                subSelect.innerHTML = ['<option value="">Select</option>']
+                    .concat(subValues.map(s => `<option value="${s}">${s}</option>`)).join('');
+                subSelect.style.display = subValues.length ? '' : 'none';
+
+                if (!category) { saveTag(kind, idx, ''); return; }
+                if (subValues.length === 0) { saveTag(kind, idx, category); return; }
+                // Category has sub-values — wait for the sub-value selection before saving.
+            };
+
+            window.onTagSubChange = (kind, idx, selectEl) => {
+                const cell = selectEl.closest('[data-tag-cell]');
+                const category = cell.querySelectorAll('select')[0].value;
+                const sub = selectEl.value;
+                if (!category || !sub) return;
+                saveTag(kind, idx, `${category} - ${sub}`);
+            };
+
+            window.onNewVisitorTagCategoryChange = () => {
+                const category = document.getElementById('nv_tag_category').value;
+                const subSelect = document.getElementById('nv_tag_sub');
+                const subValues = TAG_CATEGORIES[category] || [];
+                subSelect.innerHTML = ['<option value="">Select</option>']
+                    .concat(subValues.map(s => `<option value="${s}">${s}</option>`)).join('');
+                subSelect.disabled = subValues.length === 0;
+            };
+
+            (function initNewVisitorTagCategory() {
+                const catSelect = document.getElementById('nv_tag_category');
+                if (!catSelect) return;
+                catSelect.innerHTML = ['<option value="">Select</option>']
+                    .concat(Object.keys(TAG_CATEGORIES).map(c => `<option value="${c}">${c}</option>`)).join('');
+            })();
+
+            wirePincodeAutofill('nv_pincode', 'nv_city', 'nv_state', 'nv_pincode_status');
+
             window.switchDbTab = (tab) => {
                 dbCurrentTab = tab;
                 const cT = document.getElementById('db-cards-content');
@@ -942,8 +1100,8 @@
                     if (!dbCurrentVisitors.length) { alert('No visitors to export.'); return; }
                     headers = [
                         'Timestamp', 'Event ID', 'Event Name', 'Company Name', 'Customer Name',
-                        'WhatsApp No.', 'Groups', 'Sub-Group', 'State', 'City', 'Address',
-                        'GST No.', 'PAN No.', 'Mobile No.', 'Source'
+                        'WhatsApp No.', 'Groups', 'Pincode', 'State', 'City', 'Address',
+                        'Mobile No.', 'Source', 'Tag'
                     ];
                     rows = dbCurrentVisitors.map(v => {
                         const out = {};
@@ -1035,6 +1193,7 @@
                                     <td style="padding:15px; font-size:12px;">${srcLink}</td>
                                     <td style="padding:15px; font-size:12px; color:#64748b; max-width:200px; overflow:hidden; text-overflow:ellipsis;">${card['About Company'] || 'N/A'}</td>
                                     <td style="padding:15px; font-size:12px; color:#64748b;">${card['Location'] || 'N/A'}</td>
+                                    <td style="padding:15px; font-size:12px;">${buildTagCell('card', idx, card['Tag'])}</td>
                                     <td style="padding:15px; text-align:center;">
                                         <button onclick="openEditCardModal('${idx}', ${JSON.stringify(card).replace(/"/g, '&quot;')})" style="padding:6px 12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">Edit</button>
                                     </td>
@@ -1043,7 +1202,7 @@
                             cBody.insertAdjacentHTML('beforeend', row);
                         });
                         if (res.cards.length === 0) {
-                            cBody.innerHTML = '<tr><td colspan="21" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No scanned cards found for this event.</td></tr>';
+                            cBody.innerHTML = '<tr><td colspan="22" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No scanned cards found for this event.</td></tr>';
                         }
 
                         // Populate Visitors
@@ -1060,13 +1219,12 @@
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Company Name'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${phoneCell}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Groups'])}</td>
-                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Sub-Group'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Pincode'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['State'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['City'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b; max-width:240px; overflow:hidden; text-overflow:ellipsis;">${visitorCell(v['Address'])}</td>
-                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['GST No.'])}</td>
-                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['PAN No.'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Source'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px;">${buildTagCell('visitor', idx, v['Tag'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; text-align:center;">
                                         <button onclick="openEditVisitorModal('${idx}', ${JSON.stringify(v).replace(/"/g, '&quot;')})" style="padding:6px 12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">Edit</button>
                                     </td>
@@ -1075,7 +1233,7 @@
                             vBody.insertAdjacentHTML('beforeend', row);
                         });
                         if (res.visitors.length === 0) {
-                            vBody.innerHTML = '<tr><td colspan="11" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No visitors found for this event.</td></tr>';
+                            vBody.innerHTML = '<tr><td colspan="12" style="padding:40px; text-align:center; color:#94a3b8; font-weight:600;">No visitors found for this event.</td></tr>';
                         }
                     }
                 } catch (e) {
@@ -1141,20 +1299,42 @@
                     if (btnText) btnText.classList.add('hidden');
                     if (btnLdr) btnLdr.classList.remove('hidden');
 
+                    const nvWhatsapp = document.getElementById('nv_whatsapp').value.trim();
+                    const nvMobile = document.getElementById('nv_mobile').value.trim();
+                    const nvPincode = document.getElementById('nv_pincode').value.trim();
+                    if (!validatePhoneIfPresent(nvWhatsapp) || !validatePhoneIfPresent(nvMobile)) {
+                        toastMe('Mobile/WhatsApp must be exactly 10 digits.', '#ef4444');
+                        if (btn) btn.disabled = false;
+                        if (btnText) btnText.classList.remove('hidden');
+                        if (btnLdr) btnLdr.classList.add('hidden');
+                        return;
+                    }
+                    if (!validatePincodeIfPresent(nvPincode)) {
+                        toastMe('Pincode must be exactly 6 digits.', '#ef4444');
+                        if (btn) btn.disabled = false;
+                        if (btnText) btnText.classList.remove('hidden');
+                        if (btnLdr) btnLdr.classList.add('hidden');
+                        return;
+                    }
+
                     const payload = {
                         eventId: ev.id,
                         source: 'New Visitor',
                         companyName: document.getElementById('nv_company').value,
                         customerName: document.getElementById('nv_name').value,
-                        whatsappNo: document.getElementById('nv_whatsapp').value,
+                        whatsappNo: nvWhatsapp,
                         groups: document.getElementById('nv_groups').value,
-                        subGroup: document.getElementById('nv_subgroup').value,
+                        pincode: nvPincode,
                         state: document.getElementById('nv_state').value,
                         city: document.getElementById('nv_city').value,
                         address: document.getElementById('nv_address').value,
-                        gstNo: document.getElementById('nv_gst').value,
-                        panNo: document.getElementById('nv_pan').value,
-                        mobileNo: document.getElementById('nv_mobile').value
+                        mobileNo: nvMobile,
+                        tag: (() => {
+                            const category = document.getElementById('nv_tag_category').value;
+                            const sub = document.getElementById('nv_tag_sub').value;
+                            if (!category) return '';
+                            return sub ? `${category} - ${sub}` : category;
+                        })()
                     };
 
                     try {
@@ -1391,8 +1571,13 @@
                 bg = new Worker('worker.js');
                 bg.onmessage = e => {
                     const { status, message } = e.data;
+                    // 'info' is just a progress ping from the worker (e.g. "starting
+                    // submission") — not a final result, so it must NOT trigger done()
+                    // or a toast, otherwise a successful scan flashes "Sync failed."
+                    // before the real success message arrives.
+                    if (status === 'info') return;
                     done();
-                    if (status === 'success') toastMe('Synced with Hub.', '#10b981');
+                    if (status === 'success') toastMe('✅ Card scanned & saved successfully!', '#10b981');
                     else toastMe(message || 'Sync failed.', '#ef4444');
                 };
             } catch (err) { toastMe('Worker error.', '#ef4444'); }
@@ -1913,21 +2098,36 @@
             const m = document.getElementById('editVisitorModal');
             m.style.display = 'flex';
 
-            // Populate form with visitor data
+            // Populate form with visitor data.
+            // NOTE: visitorData is a raw sheet row keyed by header string (e.g.
+            // 'Customer Name', 'Mobile No.'), NOT the camelCase keys used when
+            // submitting — those are two different shapes, don't mix them up.
             document.getElementById('ev_rowIndex').value = visitorRowIndex;
-            document.getElementById('ev_name').value = visitorData.customerName || '';
-            document.getElementById('ev_company').value = visitorData.companyName || '';
-            document.getElementById('ev_mobile').value = visitorData.mobileNo || '';
-            document.getElementById('ev_whatsapp').value = visitorData.whatsappNo || '';
-            document.getElementById('ev_email').value = visitorData.email || '';
-            document.getElementById('ev_designation').value = visitorData.designation || '';
-            document.getElementById('ev_groups').value = visitorData.groups || '';
-            document.getElementById('ev_subgroup').value = visitorData.subGroup || '';
-            document.getElementById('ev_state').value = visitorData.state || '';
-            document.getElementById('ev_city').value = visitorData.city || '';
-            document.getElementById('ev_address').value = visitorData.address || '';
-            document.getElementById('ev_gst').value = visitorData.gstNo || '';
-            document.getElementById('ev_pan').value = visitorData.panNo || '';
+            document.getElementById('ev_name').value = visitorData['Customer Name'] || '';
+            document.getElementById('ev_company').value = visitorData['Company Name'] || '';
+            document.getElementById('ev_mobile').value = visitorData['Mobile No.'] || '';
+            document.getElementById('ev_whatsapp').value = visitorData['WhatsApp No.'] || '';
+            document.getElementById('ev_email').value = visitorData['Email'] || '';
+            document.getElementById('ev_designation').value = visitorData['Designation'] || '';
+            document.getElementById('ev_groups').value = visitorData['Groups'] || '';
+            document.getElementById('ev_pincode').value = visitorData['Pincode'] || '';
+            document.getElementById('ev_state').value = visitorData['State'] || '';
+            document.getElementById('ev_city').value = visitorData['City'] || '';
+            document.getElementById('ev_address').value = visitorData['Address'] || '';
+
+            const { category, sub } = parseTagValue(visitorData['Tag']);
+            document.getElementById('ev_tag_category').value = category;
+            onEditVisitorTagCategoryChange();
+            document.getElementById('ev_tag_sub').value = sub;
+        };
+
+        window.onEditVisitorTagCategoryChange = () => {
+            const category = document.getElementById('ev_tag_category').value;
+            const subSelect = document.getElementById('ev_tag_sub');
+            const subValues = TAG_CATEGORIES[category] || [];
+            subSelect.innerHTML = ['<option value="">Select</option>']
+                .concat(subValues.map(s => `<option value="${s}">${s}</option>`)).join('');
+            subSelect.disabled = subValues.length === 0;
         };
 
         window.closeEditVisitorModal = () => {
@@ -1937,20 +2137,42 @@
 
         window.submitEditVisitor = async () => {
             const rowIndex = document.getElementById('ev_rowIndex').value;
+            const mobileNo = document.getElementById('ev_mobile').value.trim();
+            const whatsappNo = document.getElementById('ev_whatsapp').value.trim();
+            const email = document.getElementById('ev_email').value.trim();
+            const pincode = document.getElementById('ev_pincode').value.trim();
+
+            if (!validatePhoneIfPresent(mobileNo) || !validatePhoneIfPresent(whatsappNo)) {
+                toastMe('Mobile/WhatsApp must be exactly 10 digits.', '#ef4444');
+                return;
+            }
+            if (!validateEmailIfPresent(email)) {
+                toastMe('Enter a valid email address.', '#ef4444');
+                return;
+            }
+            if (!validatePincodeIfPresent(pincode)) {
+                toastMe('Pincode must be exactly 6 digits.', '#ef4444');
+                return;
+            }
+
             const data = {
                 customerName: document.getElementById('ev_name').value,
                 companyName: document.getElementById('ev_company').value,
-                mobileNo: document.getElementById('ev_mobile').value,
-                whatsappNo: document.getElementById('ev_whatsapp').value,
-                email: document.getElementById('ev_email').value,
+                mobileNo: mobileNo,
+                whatsappNo: whatsappNo,
+                email: email,
                 designation: document.getElementById('ev_designation').value,
                 groups: document.getElementById('ev_groups').value,
-                subGroup: document.getElementById('ev_subgroup').value,
+                pincode: pincode,
                 state: document.getElementById('ev_state').value,
                 city: document.getElementById('ev_city').value,
                 address: document.getElementById('ev_address').value,
-                gstNo: document.getElementById('ev_gst').value,
-                panNo: document.getElementById('ev_pan').value
+                tag: (() => {
+                    const category = document.getElementById('ev_tag_category').value;
+                    const sub = document.getElementById('ev_tag_sub').value;
+                    if (!category) return '';
+                    return sub ? `${category} - ${sub}` : category;
+                })()
             };
 
             const btn = document.getElementById('evSubmitBtn');
@@ -2226,34 +2448,25 @@
                             <input type="text" id="ev_designation" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
                         </div>
 
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                            <div>
-                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Groups</label>
-                                <select id="ev_groups" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-                                    <option value="">Select</option>
-                                    <option>Atw</option>
-                                    <option>Customer</option>
-                                    <option>Branch Division</option>
-                                    <option>CL Customer</option>
-                                    <option>Jf Customer</option>
-                                    <option>Karigar</option>
-                                    <option>Staff</option>
-                                    <option>Supplier</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Sub-Group</label>
-                                <select id="ev_subgroup" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-                                    <option value="">Select</option>
-                                    <option>Gold</option>
-                                    <option>Gold Mini</option>
-                                    <option>Silver</option>
-                                    <option>Platinum</option>
-                                    <option>PC Aware</option>
-                                    <option>PC Unaware</option>
-                                    <option>Lost Customer</option>
-                                </select>
-                            </div>
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Groups</label>
+                            <select id="ev_groups" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                                <option value="">Select</option>
+                                <option>Atw</option>
+                                <option>Customer</option>
+                                <option>Branch Division</option>
+                                <option>CL Customer</option>
+                                <option>Jf Customer</option>
+                                <option>Karigar</option>
+                                <option>Staff</option>
+                                <option>Supplier</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Pincode</label>
+                            <input type="text" id="ev_pincode" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                            <p id="ev_pincode_status" style="font-size:11px;color:#94a3b8;margin-top:4px;"></p>
                         </div>
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -2274,12 +2487,16 @@
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                             <div>
-                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">GST No.</label>
-                                <input type="text" id="ev_gst" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">Tag</label>
+                                <select id="ev_tag_category" onchange="onEditVisitorTagCategoryChange()" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                                    <option value="">Select</option>
+                                </select>
                             </div>
                             <div>
-                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">PAN No.</label>
-                                <input type="text" id="ev_pan" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                                <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#475569;text-transform:uppercase;letter-spacing:0.05em;">&nbsp;</label>
+                                <select id="ev_tag_sub" style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                                    <option value="">Select</option>
+                                </select>
                             </div>
                         </div>
 
@@ -2292,6 +2509,12 @@
             `;
 
             document.body.appendChild(modal);
+
+            const catSelect = modal.querySelector('#ev_tag_category');
+            catSelect.innerHTML = ['<option value="">Select</option>']
+                .concat(Object.keys(TAG_CATEGORIES).map(c => `<option value="${c}">${c}</option>`)).join('');
+
+            wirePincodeAutofill('ev_pincode', 'ev_city', 'ev_state', 'ev_pincode_status');
 
             // Close on backdrop click
             modal.onclick = (e) => {

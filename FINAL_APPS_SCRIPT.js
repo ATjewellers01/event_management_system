@@ -374,9 +374,15 @@ function saveEventCardData(extractedData, photo1Base64, photo2Base64, eventInfo)
       "Designation", "Phone", "Email", "Website", "Social Media", "Address",
       "Services", "Company Size", "Founded Year", "Registration Status",
       "Trust Score", "People (Founders)", "Is Validated", "Source Link",
-      "About Company", "Location"
+      "About Company", "Location", "Tag"
     ]);
-    sheet.getRange(1, 1, 1, 26).setFontWeight("bold").setBackground("#f3f3f3");
+    sheet.getRange(1, 1, 1, 27).setFontWeight("bold").setBackground("#f3f3f3");
+  }
+  // Backfill "Tag" header onto sheets created before this column existed.
+  const cardHeaderRow = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  if (cardHeaderRow.indexOf("Tag") === -1) {
+    const tagCol = sheet.getLastColumn() + 1;
+    sheet.getRange(1, tagCol).setValue("Tag").setFontWeight("bold").setBackground("#f3f3f3");
   }
 
   let folder;
@@ -408,33 +414,59 @@ function saveEventCardData(extractedData, photo1Base64, photo2Base64, eventInfo)
     return /^[=+\-@]/.test(s) ? "'" + s : s;
   };
 
-  sheet.appendRow([
-    timestamp,
-    eventInfo.id || "N/A",
-    eventInfo.name || "N/A",
-    eventInfo.startDate || "N/A",
-    eventInfo.endDate || "N/A",
-    img1, img2,
-    safe(d.company_name || d.company || ""),
-    safe(d.industry || ""),
-    safe(d.person_name || d.name || ""),
-    safe(d.designation || d.title || ""),
-    safe(d.phone || ""),
-    safe(d.email || ""),
-    safe(d.website || ""),
-    safe(d.social_media || ""),
-    safe(d.address || ""),
-    safe(d.services || ""),
-    safe(d.company_size || ""),
-    safe(d.founded_year || d.established_year || ""),
-    safe(d.registration_status || ""),
-    safe(d.trust_score || ""),
-    safe(d.people || d.key_people || ""),
-    safe(d.is_validated || ""),
-    d.source_link || d.validation_source || "",
-    safe(d.about_company || d.about_the_company || ""),
-    safe(d.location || "")
-  ]);
+  // key_people arrives from the Python backend as [{name, role, contact}, ...].
+  // Stringifying that array directly yields "[object Object]", so format it into
+  // readable lines the way saveData() already does.
+  const formatKeyPeople = (v) => {
+    if (!v) return "";
+    if (Array.isArray(v)) {
+      return v.map((p) => {
+        if (!p || typeof p !== 'object') return String(p || "");
+        let details = String(p.name || "").trim();
+        if (p.role && p.role !== "Not Found") details += " (" + p.role + ")";
+        if (p.contact && p.contact !== "Not Found") details += " - " + p.contact;
+        return details;
+      }).filter(String).join("\n");
+    }
+    return String(v);
+  };
+
+  const cardValueByHeader = {
+    "Timestamp": timestamp,
+    "Event ID": eventInfo.id || "N/A",
+    "Event Name": eventInfo.name || "N/A",
+    "Event Start Date": eventInfo.startDate || "N/A",
+    "Event End Date": eventInfo.endDate || "N/A",
+    "Card Photo 1": img1,
+    "Card Photo 2": img2,
+    "Company Name": safe(d.company_name || d.company || ""),
+    "Industry": safe(d.industry || ""),
+    "Person Name": safe(d.person_name || d.name || ""),
+    "Designation": safe(d.designation || d.title || ""),
+    "Phone": safe(d.phone || ""),
+    "Email": safe(d.email || ""),
+    "Website": safe(d.website || ""),
+    "Social Media": safe(d.social_media || ""),
+    "Address": safe(d.address || ""),
+    "Services": safe(d.services || ""),
+    "Company Size": safe(d.company_size || ""),
+    "Founded Year": safe(d.founded_year || d.established_year || ""),
+    "Registration Status": safe(d.registration_status || ""),
+    "Trust Score": safe(d.trust_score || ""),
+    "People (Founders)": safe(formatKeyPeople(d.people || d.key_people)),
+    // Booleans must not go through `|| ""` — that turns a real `false` into a
+    // blank cell, which reads as "never checked" instead of "checked, not verified".
+    "Is Validated": (d.is_validated === true || d.is_validated === false)
+      ? String(d.is_validated)
+      : safe(d.is_validated || ""),
+    "Source Link": d.source_link || d.validation_source || "",
+    "About Company": safe(d.about_company || d.about_the_company || ""),
+    "Location": safe(d.location || ""),
+    "Tag": ""
+  };
+  const cardHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const cardRow = cardHeaders.map((h) => (h in cardValueByHeader ? cardValueByHeader[h] : ""));
+  sheet.appendRow(cardRow);
 
   return { success: true, message: "Card saved to Event Hub!" };
 }
@@ -642,14 +674,13 @@ function saveVisitorAndGetContact(visitorData) {
     "Customer Name",
     "WhatsApp No.",
     "Groups",
-    "Sub-Group",
+    "Pincode",
     "State",
     "City",
     "Address",
-    "GST No.",
-    "PAN No.",
     "Mobile No.",
-    "Source"
+    "Source",
+    "Tag"
   ];
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
@@ -678,14 +709,13 @@ function saveVisitorAndGetContact(visitorData) {
     "Customer Name": visitorData.customerName || visitorData.visitorName || "",
     "WhatsApp No.": visitorData.whatsappNo || "",
     "Groups": visitorData.groups || "",
-    "Sub-Group": visitorData.subGroup || "",
+    "Pincode": visitorData.pincode || "",
     "State": visitorData.state || "",
     "City": visitorData.city || visitorData.visitorCity || "",
     "Address": visitorData.address || "",
-    "GST No.": visitorData.gstNo || "",
-    "PAN No.": visitorData.panNo || "",
     "Mobile No.": visitorData.mobileNo || visitorData.visitorMobile || "",
-    "Source": visitorData.source || "QR"
+    "Source": visitorData.source || "QR",
+    "Tag": visitorData.tag || ""
   };
   const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const row = headerRow.map((h) => (h in fieldByHeader ? fieldByHeader[h] : ""));
@@ -965,23 +995,33 @@ function updateCard(cardId, cardData) {
 
     let updateRow = data[rowIndex];
 
+    // Map sheet header -> payload key. Only keys actually PRESENT in the payload
+    // are written, so a partial update (e.g. the inline Tag dropdown sending just
+    // {Tag: "..."}) leaves every other cell untouched instead of blanking the row.
+    const CARD_FIELD_BY_HEADER = {
+      "company name": "Company Name",
+      "industry": "Industry",
+      "person name": "Person Name",
+      "designation": "Designation",
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "social media": "Social Media",
+      "address": "Address",
+      "services": "Services",
+      "company size": "Company Size",
+      "founded year": "Founded Year",
+      "location": "Location",
+      "about company": "About Company",
+      "tag": "Tag"
+    };
+
     headers.forEach((header, idx) => {
       const hTrim = String(header).trim().toLowerCase();
-
-      if (hTrim === "company name") updateRow[idx] = cardData['Company Name'] || "";
-      if (hTrim === "industry") updateRow[idx] = cardData['Industry'] || "";
-      if (hTrim === "person name") updateRow[idx] = cardData['Person Name'] || "";
-      if (hTrim === "designation") updateRow[idx] = cardData['Designation'] || "";
-      if (hTrim === "phone") updateRow[idx] = cardData['Phone'] || "";
-      if (hTrim === "email") updateRow[idx] = cardData['Email'] || "";
-      if (hTrim === "website") updateRow[idx] = cardData['Website'] || "";
-      if (hTrim === "social media") updateRow[idx] = cardData['Social Media'] || "";
-      if (hTrim === "address") updateRow[idx] = cardData['Address'] || "";
-      if (hTrim === "services") updateRow[idx] = cardData['Services'] || "";
-      if (hTrim === "company size") updateRow[idx] = cardData['Company Size'] || "";
-      if (hTrim === "founded year") updateRow[idx] = cardData['Founded Year'] || "";
-      if (hTrim === "location") updateRow[idx] = cardData['Location'] || "";
-      if (hTrim === "about company") updateRow[idx] = cardData['About Company'] || "";
+      const cardKey = CARD_FIELD_BY_HEADER[hTrim];
+      if (cardKey && cardKey in cardData) {
+        updateRow[idx] = cardData[cardKey] == null ? "" : cardData[cardKey];
+      }
     });
 
     sheet.getRange(rowIndex + 1, 1, 1, updateRow.length).setValues([updateRow]);
@@ -1024,22 +1064,32 @@ function updateVisitor(visitorId, visitorData) {
     // Update the specific row
     let updateRow = data[rowIndex];
 
+    // Map sheet header -> payload key. Only keys actually PRESENT in the payload
+    // are written, so a partial update (e.g. the inline Tag dropdown sending just
+    // {tag: "..."}) leaves every other cell untouched instead of blanking the row.
+    const VISITOR_FIELD_BY_HEADER = {
+      "customer name": "customerName",
+      "company name": "companyName",
+      "mobile no.": "mobileNo",
+      "mobile": "mobileNo",
+      "whatsapp no.": "whatsappNo",
+      "whatsapp": "whatsappNo",
+      "email": "email",
+      "designation": "designation",
+      "groups": "groups",
+      "pincode": "pincode",
+      "state": "state",
+      "city": "city",
+      "address": "address",
+      "tag": "tag"
+    };
+
     headers.forEach((header, idx) => {
       const hTrim = String(header).trim().toLowerCase();
-
-      if (hTrim === "customer name") updateRow[idx] = visitorData.customerName || "";
-      if (hTrim === "company name") updateRow[idx] = visitorData.companyName || "";
-      if (hTrim === "mobile no." || hTrim === "mobile") updateRow[idx] = visitorData.mobileNo || "";
-      if (hTrim === "whatsapp no." || hTrim === "whatsapp") updateRow[idx] = visitorData.whatsappNo || "";
-      if (hTrim === "email") updateRow[idx] = visitorData.email || "";
-      if (hTrim === "designation") updateRow[idx] = visitorData.designation || "";
-      if (hTrim === "groups") updateRow[idx] = visitorData.groups || "";
-      if (hTrim === "sub-group") updateRow[idx] = visitorData.subGroup || "";
-      if (hTrim === "state") updateRow[idx] = visitorData.state || "";
-      if (hTrim === "city") updateRow[idx] = visitorData.city || "";
-      if (hTrim === "address") updateRow[idx] = visitorData.address || "";
-      if (hTrim === "gst no." || hTrim === "gst") updateRow[idx] = visitorData.gstNo || "";
-      if (hTrim === "pan no." || hTrim === "pan") updateRow[idx] = visitorData.panNo || "";
+      const visitorKey = VISITOR_FIELD_BY_HEADER[hTrim];
+      if (visitorKey && visitorKey in visitorData) {
+        updateRow[idx] = visitorData[visitorKey] == null ? "" : visitorData[visitorKey];
+      }
     });
 
     // Write the updated row back

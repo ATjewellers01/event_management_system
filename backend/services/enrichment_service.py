@@ -4,6 +4,7 @@ from backend.core.config import async_client, logger
 from backend.core.models import OCRResponse
 from backend.services.search_service import google_search
 from backend.services.scraping_service import scrape_jina
+from backend.services.ocr_service import englishify_fields
 
 async def run_waterfall_enrichment(ocr_data: dict):
     logger.info("Starting Waterfall Enrichment (Step 2)...")
@@ -87,20 +88,79 @@ async def run_waterfall_enrichment(ocr_data: dict):
     """
     
     extraction_prompt = f"""
-    investigation report: {combined_search_context}
-    original card: {json.dumps(ocr_data)}
-    Rules: Clean socials, find single best validation_source, identify key people, calc trust score 0-10.
+    INVESTIGATION REPORT (from the web):
+    {combined_search_context}
+
+    ORIGINAL BUSINESS CARD DATA (already OCR'd and converted to English):
+    {json.dumps(ocr_data, ensure_ascii=False)}
+
+    Produce the final structured record.
+
+    LANGUAGE: every value must be English / Latin script. If any input value is in
+    Devanagari or another Indic script, transliterate names and translate descriptive
+    text. Never output non-Latin script.
+
+    TRUST THE CARD for these fields — copy them through unchanged from the card data
+    above, only correcting obvious OCR typos. Do NOT replace them with values found
+    on the web:
+      company, name, title, phone, email, address, location
+
+    FIELD DEFINITIONS — put each value in the correct field, never shift them:
+      company             : firm/business name only, never a person's name.
+      name                : the card holder's personal name only, never the firm name.
+      title               : that person's designation (Proprietor, Director, Partner...).
+      phone               : phone numbers only, comma-separated if several.
+      email               : email addresses only (must contain '@').
+      website             : the company's official website URL only.
+      address             : full street address.
+      location            : city and/or state only — a short place name, not the address.
+      industry            : sector, e.g. "Jewellery", "Jewellery Retail", "Manufacturing".
+                            A short category — never a company name, never a list of services.
+      services            : the products/services offered, comma-separated.
+      company_size        : employee count or range, digits/ranges only.
+      founded_year        : 4-digit year only, e.g. "1998". Empty if unknown.
+      registration_status : GST / CIN / registration state, e.g. "Active", "GST Registered".
+      social_media        : newline-separated profile URLs only, no other text.
+      validation_source   : the single best URL that verifies this company exists.
+      is_validated        : true only if a credible source confirms the company.
+      about_the_company   : 1-2 sentence description in English.
+      trust_score         : integer 0-10 as a string.
+      key_people          : leadership found on the web (name / role / contact each).
+      slogan              : the card's tagline if present.
+
+    If a value is unknown, return an empty string — never invent one, and never put a
+    placeholder or another field's value in its place.
     """
-    
+
     completion = await async_client.beta.chat.completions.parse(
-        model="gpt-4o", 
+        model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are a precise JSON extractor and verification agent."},
+            {
+                "role": "system",
+                "content": (
+                    "You are a precise JSON extractor and verification agent for Indian "
+                    "business cards. You always output English/Latin script, you keep each "
+                    "value strictly in its own field, and you never fabricate data."
+                )
+            },
             {"role": "user", "content": extraction_prompt}
         ],
-        response_format=OCRResponse, 
+        response_format=OCRResponse,
+        temperature=0.0
     )
-    
+
     final_data = completion.choices[0].message.parsed.model_dump()
+
+    # Final guard: enforce Latin script on every text field that reaches the sheet,
+    # so nothing in Devanagari can slip into a column regardless of model behaviour.
+    final_data = await englishify_fields(final_data, [
+        'company', 'name', 'title', 'address', 'location', 'industry',
+        'services', 'registration_status', 'about_the_company', 'slogan'
+    ])
+
+    for person in final_data.get('key_people') or []:
+        if isinstance(person, dict):
+            await englishify_fields(person, ['name', 'role'])
+
     logger.info("Waterfall Enrichment Complete.")
     return final_data

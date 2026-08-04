@@ -69,39 +69,17 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="input-label">WhatsApp No.</label>
-                        <input type="tel" id="v_whatsapp" class="input-field">
+                        <input type="tel" id="v_whatsapp" class="input-field" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="Enter a 10-digit phone number">
                     </div>
                     <div>
                         <label class="input-label">Mobile No.</label>
-                        <input type="tel" id="v_mobile" class="input-field">
+                        <input type="tel" id="v_mobile" class="input-field" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="Enter a 10-digit phone number">
                     </div>
                 </div>
                 <div>
-                    <label class="input-label">Group <span class="text-red-500">*</span></label>
-                    <select id="v_groups" class="input-field" required>
-                        <option value="">Select group</option>
-                        <option>Atw</option>
-                        <option>Customer</option>
-                        <option>Branch Division</option>
-                        <option>CL Customer</option>
-                        <option>Jf Customer</option>
-                        <option>Karigar</option>
-                        <option>Staff</option>
-                        <option>Supplier</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="input-label">Sub-Group <span class="text-red-500">*</span></label>
-                    <select id="v_subgroup" class="input-field" required>
-                        <option value="">Select sub-group</option>
-                        <option>Gold</option>
-                        <option>Gold Mini</option>
-                        <option>Silver</option>
-                        <option>Platinum</option>
-                        <option>PC Aware</option>
-                        <option>PC Unaware</option>
-                        <option>Lost Customer</option>
-                    </select>
+                    <label class="input-label">Pincode</label>
+                    <input type="text" id="v_pincode" class="input-field" inputmode="numeric" pattern="[0-9]{6}" maxlength="6">
+                    <p id="v_pincode_status" class="text-xs text-gray-400 mt-1"></p>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -116,16 +94,6 @@
                 <div>
                     <label class="input-label">Address <span class="text-red-500">*</span></label>
                     <input type="text" id="v_address" class="input-field" required>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="input-label">GST No.</label>
-                        <input type="text" id="v_gst" class="input-field">
-                    </div>
-                    <div>
-                        <label class="input-label">PAN No.</label>
-                        <input type="text" id="v_pan" class="input-field">
-                    </div>
                 </div>
                 <div class="pt-2">
                     <button type="submit" id="submitBtn" class="btn-primary">Submit Details</button>
@@ -233,6 +201,50 @@
         const eventId = pathParts[pathParts.length - 1];
         let eventDataCache = null;
 
+        // Pincode -> City/State autofill via api.postalpincode.in (free, no key).
+        // City/State stay editable always — a miss or network failure just
+        // falls back to manual entry, it never blocks the form.
+        function wirePincodeAutofill(pincodeId, cityId, stateId, statusId) {
+            const pinInput = document.getElementById(pincodeId);
+            const cityInput = document.getElementById(cityId);
+            const stateInput = document.getElementById(stateId);
+            const statusEl = statusId ? document.getElementById(statusId) : null;
+            if (!pinInput) return;
+
+            let lastRequestId = 0;
+
+            pinInput.addEventListener('input', async () => {
+                const pin = pinInput.value.trim();
+                const requestId = ++lastRequestId;
+                const isStale = () => requestId !== lastRequestId;
+
+                if (!/^\d{6}$/.test(pin)) {
+                    if (statusEl) statusEl.textContent = '';
+                    return;
+                }
+
+                if (statusEl) statusEl.textContent = 'Looking up…';
+                try {
+                    const r = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+                    const data = await r.json();
+                    if (isStale()) return;
+
+                    const result = Array.isArray(data) ? data[0] : null;
+                    if (result && result.Status === 'Success' && result.PostOffice && result.PostOffice.length) {
+                        const po = result.PostOffice[0];
+                        if (cityInput) cityInput.value = po.District || cityInput.value;
+                        if (stateInput) stateInput.value = po.State || stateInput.value;
+                        if (statusEl) statusEl.textContent = '';
+                    } else {
+                        if (statusEl) statusEl.textContent = 'PIN not found — enter city/state manually';
+                    }
+                } catch (e) {
+                    if (isStale()) return;
+                    if (statusEl) statusEl.textContent = 'PIN not found — enter city/state manually';
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("EventID from URL:", eventId);
             if (!eventId || eventId === 'visitor-form') {
@@ -240,6 +252,8 @@
                 document.getElementById('submitBtn').disabled = true;
                 return;
             }
+
+            wirePincodeAutofill('v_pincode', 'v_city', 'v_state', 'v_pincode_status');
 
             // Fetch the event name to change the intro text
             try {
@@ -280,13 +294,10 @@
                 companyName: document.getElementById('v_company').value,
                 customerName: document.getElementById('v_name').value,
                 whatsappNo: document.getElementById('v_whatsapp').value,
-                groups: document.getElementById('v_groups').value,
-                subGroup: document.getElementById('v_subgroup').value,
+                pincode: document.getElementById('v_pincode').value,
                 state: document.getElementById('v_state').value,
                 city: document.getElementById('v_city').value,
                 address: document.getElementById('v_address').value,
-                gstNo: document.getElementById('v_gst').value,
-                panNo: document.getElementById('v_pan').value,
                 mobileNo: document.getElementById('v_mobile').value
             };
 
