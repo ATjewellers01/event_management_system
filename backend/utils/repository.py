@@ -60,7 +60,7 @@ def get_event_by_id(event_id: str) -> dict:
     def op(conn):
         rows = conn.execute(
             """SELECT event_id, event_name, start_date, end_date, location,
-                      description, created_at
+                      description, created_at, pincode, city, state, address
                FROM events WHERE event_id = ?""",
             (event_id,),
         ).fetchall()
@@ -71,13 +71,15 @@ def get_event_by_id(event_id: str) -> dict:
             "SELECT member_name, designation, phone FROM event_members WHERE event_id = ?",
             (event_id,),
         ).fetchall()
-        # Sheet-style keys, so the existing frontend needs no changes.
+        # Header-style keys, matching what the frontend already reads.
         return {
             "success": True,
             "data": {
                 "Timestamp": r[6], "Event ID": r[0], "Event Name": r[1],
                 "Start Date": r[2], "End Date": r[3], "Location": r[4],
                 "Description": r[5],
+                "Pincode": r[7] or "", "City": r[8] or "",
+                "State": r[9] or "", "Address": r[10] or "",
                 "Member Name": members[0][0] if members else "",
                 "Designation": members[0][1] if members else "",
                 "Phone": members[0][2] if members else "",
@@ -103,15 +105,27 @@ def save_event(event_data: dict) -> dict:
                 continue
         event_id = f"EVT-{highest + 1:03d}"
 
+        # The event's own location uses event*-prefixed keys: plain city/state/
+        # pincode/address in this payload belong to the COMPANY PROFILE, and
+        # reading those would file the company's address as the event's.
+        city = (event_data.get("eventCity") or "").strip()
+        state = (event_data.get("eventState") or "").strip()
+        # `location` is the display string shown on the event cards and header.
+        # Fall back to a caller-supplied `location` so older clients still work.
+        location = ", ".join(p for p in (city, state) if p) or (event_data.get("location") or "")
+
         conn.execute(
             """INSERT INTO events (event_id,event_name,start_date,end_date,location,
-                                   description,created_at)
-               VALUES (?,?,?,?,?,?,?)""",
+                                   pincode,city,state,address,description,created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (event_id,
              event_data.get("eventName") or "",
              event_data.get("startDate") or "",
              event_data.get("endDate") or "",
-             event_data.get("location") or "",
+             location,
+             (event_data.get("eventPincode") or "").strip(),
+             city, state,
+             (event_data.get("eventAddress") or "").strip(),
              event_data.get("description") or "",
              _now()),
         )

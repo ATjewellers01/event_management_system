@@ -32,7 +32,13 @@ SCHEMA_STATEMENTS = [
         event_name   TEXT NOT NULL DEFAULT '',
         start_date   TEXT DEFAULT '',
         end_date     TEXT DEFAULT '',
+        -- Kept as a display string ("City, State") for the event cards and
+        -- header; pincode/city/state/address hold the structured values.
         location     TEXT DEFAULT '',
+        pincode      TEXT DEFAULT '',
+        city         TEXT DEFAULT '',
+        state        TEXT DEFAULT '',
+        address      TEXT DEFAULT '',
         description  TEXT DEFAULT '',
         created_at   TEXT DEFAULT '',
         source_row   INTEGER

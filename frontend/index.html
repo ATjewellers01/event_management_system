@@ -755,8 +755,21 @@
                                 <input type="date" id="end_date" class="input-field" required>
                             </div>
                             <div class="input-group md:col-span-2">
-                                <label class="input-label">Location</label>
-                                <input type="text" id="event_location" class="input-field" placeholder="Full address or Venue name" required>
+                                <label class="input-label">Pincode</label>
+                                <input type="text" id="event_pincode" class="input-field" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit pincode" title="Enter a 6-digit pincode" required>
+                                <p id="event_pincode_status" class="text-xs text-gray-400 mt-1"></p>
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">City</label>
+                                <input type="text" id="event_city" class="input-field" placeholder="City" required>
+                            </div>
+                            <div class="input-group">
+                                <label class="input-label">State</label>
+                                <input type="text" id="event_state" class="input-field" placeholder="State" required>
+                            </div>
+                            <div class="input-group md:col-span-2">
+                                <label class="input-label">Full Address (Optional)</label>
+                                <input type="text" id="event_address" class="input-field" placeholder="Venue name, street, landmark…">
                             </div>
                             <div class="input-group md:col-span-2">
                                 <label class="input-label">Description (Optional)</label>
@@ -1048,6 +1061,7 @@
             // dropdown and needs no cascade handler here.
 
             wirePincodeAutofill('nv_pincode', 'nv_city', 'nv_state', 'nv_pincode_status');
+            wirePincodeAutofill('event_pincode', 'event_city', 'event_state', 'event_pincode_status');
 
             window.switchDbTab = (tab) => {
                 dbCurrentTab = tab;
@@ -1685,6 +1699,10 @@
                 setTimeout(() => {
                     eventSuccessOverlay.classList.remove('active');
                     eventForm.reset();
+                    // reset() only clears inputs, so the pincode lookup message
+                    // would otherwise linger on the next open.
+                    const pinStatus = document.getElementById('event_pincode_status');
+                    if (pinStatus) pinStatus.textContent = '';
                     membersList.innerHTML = '';
                     eventBtnText.classList.remove('hidden');
                     eventBtnLoader.classList.add('hidden');
@@ -1781,7 +1799,14 @@
                     eventName: document.getElementById('event_name').value,
                     startDate: document.getElementById('start_date').value,
                     endDate: document.getElementById('end_date').value,
-                    location: document.getElementById('event_location').value,
+                    // Event location. Deliberately NOT named city/state/pincode:
+                    // those keys are already taken below by the company profile,
+                    // and reusing them would file the company's address as the
+                    // event's address.
+                    eventPincode: document.getElementById('event_pincode').value.trim(),
+                    eventCity: document.getElementById('event_city').value.trim(),
+                    eventState: document.getElementById('event_state').value.trim(),
+                    eventAddress: document.getElementById('event_address').value.trim(),
                     description: document.getElementById('event_description').value,
                     // Company fields from profile
                     companyName: prof.companyName || '',
