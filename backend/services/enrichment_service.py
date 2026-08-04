@@ -1,10 +1,11 @@
 import re
 import json
-from backend.core.config import async_client, logger
+from backend.core.config import logger
 from backend.core.models import OCRResponse
 from backend.services.search_service import google_search
 from backend.services.scraping_service import scrape_jina
 from backend.services.ocr_service import englishify_fields
+from backend.services import llm_client
 
 async def run_waterfall_enrichment(ocr_data: dict):
     logger.info("Starting Waterfall Enrichment (Step 2)...")
@@ -78,7 +79,7 @@ async def run_waterfall_enrichment(ocr_data: dict):
 
     social_links_str = "\n".join(sorted(found_socials))
     
-    # --- Phase 4: GPT-4o Synthesis ---
+    # --- Phase 4: LLM Synthesis ---
     combined_search_context = f"""
     1. WEB: {official_url}
     2. SOCIALS: {social_links_str}
@@ -132,9 +133,11 @@ async def run_waterfall_enrichment(ocr_data: dict):
     placeholder or another field's value in its place.
     """
 
-    completion = await async_client.beta.chat.completions.parse(
-        model="gpt-4o",
-        messages=[
+    # This is the single most expensive call in a scan (~64% of LLM cost), because
+    # it carries the scraped page text. Routed through llm_client so it runs on
+    # Groq's free tier, falling back to OpenAI on any failure.
+    parsed = await llm_client.structured(
+        [
             {
                 "role": "system",
                 "content": (
@@ -145,11 +148,10 @@ async def run_waterfall_enrichment(ocr_data: dict):
             },
             {"role": "user", "content": extraction_prompt}
         ],
-        response_format=OCRResponse,
-        temperature=0.0
+        OCRResponse,
     )
 
-    final_data = completion.choices[0].message.parsed.model_dump()
+    final_data = parsed.model_dump()
 
     # Final guard: enforce Latin script on every text field that reaches the sheet,
     # so nothing in Devanagari can slip into a column regardless of model behaviour.

@@ -25,6 +25,7 @@ from backend.services.ocr_service import extract_card_data
 from backend.services.enrichment_service import run_waterfall_enrichment
 from backend.utils import repository as repo
 from backend.utils import images
+from backend.services import llm_client
 from backend.utils.turso import check_connection_async, init_schema
 
 app = FastAPI(title="Event Hub API")
@@ -48,6 +49,7 @@ async def on_startup():
     else:
         logger.error("TURSO UNAVAILABLE AT STARTUP — %s", status.get("reason"))
     logger.info("Image storage: %s", images.status())
+    logger.info("LLM routing: %s", llm_client.status())
 
 
 @app.get("/api/config")
@@ -63,6 +65,7 @@ async def health():
     return {
         "database": db,
         "images": images.status(),
+        "llm": llm_client.status(),
     }
 
 

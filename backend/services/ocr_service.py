@@ -1,5 +1,6 @@
 from backend.core.config import async_client, logger
 from backend.core.models import BasicOCR
+from backend.services import llm_client
 import re
 
 # Devanagari (Hindi/Marathi), Gujarati, Bengali, Tamil, Telugu, Kannada,
@@ -35,26 +36,23 @@ async def transliterate_to_english(text: str) -> str:
         return text
 
     try:
-        response = await async_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You convert Indian-language business card text to English. "
-                        "For names of companies, people, and places: TRANSLITERATE to "
-                        "Latin script so pronunciation is preserved (e.g. 'ज्वेलर्स' -> "
-                        "'Jewellers', 'सुचित बोहरा' -> 'Suchit Bohra'). "
-                        "For descriptive phrases: translate the meaning. "
-                        "Keep digits, emails, URLs and phone numbers exactly as-is. "
-                        "Return ONLY the converted text with no quotes, labels, or commentary."
-                    )
-                },
-                {"role": "user", "content": str(text)}
-            ],
-            temperature=0.0
-        )
-        converted = response.choices[0].message.content.strip()
+        # Routed through llm_client: Groq's free tier handles this fine and it is
+        # ~11% of the per-scan LLM cost. Falls back to OpenAI automatically.
+        converted = await llm_client.text([
+            {
+                "role": "system",
+                "content": (
+                    "You convert Indian-language business card text to English. "
+                    "For names of companies, people, and places: TRANSLITERATE to "
+                    "Latin script so pronunciation is preserved (e.g. 'ज्वेलर्स' -> "
+                    "'Jewellers', 'सुचित बोहरा' -> 'Suchit Bohra'). "
+                    "For descriptive phrases: translate the meaning. "
+                    "Keep digits, emails, URLs and phone numbers exactly as-is. "
+                    "Return ONLY the converted text with no quotes, labels, or commentary."
+                )
+            },
+            {"role": "user", "content": str(text)}
+        ])
         logger.info(f"Transliterated: '{text}' -> '{converted}'")
         return converted or text
     except Exception as e:
