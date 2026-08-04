@@ -1,9 +1,8 @@
 """Data access for Turso.
 
-This is the whole data layer — reads and writes both go here, and Google Sheets
-is not involved. Each function returns the same shape the frontend already
-expects (sheet-header-keyed dicts like 'Company Name'), so the UI needed no
-changes when the backend moved off Sheets.
+This is the whole data layer — reads and writes both go here. Each function
+returns header-keyed dicts (like 'Company Name'), which is the shape the frontend
+already expected, so moving the backend to Turso needed no UI rewrite.
 
 Connections are reused via `with_connection`. Opening one per call costs ~115ms
 of handshake, which dominated query time (500-1000ms per call versus 120-200ms

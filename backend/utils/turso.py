@@ -1,12 +1,10 @@
 """Turso (libSQL) connection and schema.
 
-The schema mirrors the Google Sheets tabs so the migration is a straight copy and
-the app can read from either backend during the trial. Sheet header names map to
-snake_case columns; `source_row` keeps the original sheet row number so a record
-can still be traced back to the spreadsheet after migrating.
+Column names are snake_case. `source_row` records the row number a record had in
+the original spreadsheet, kept so migrated rows can still be traced back to it.
 
-Everything here fails soft: if Turso is not configured, `get_connection()`
-returns None and callers fall back to Sheets rather than erroring.
+`get_connection()` returns None rather than raising when Turso is unavailable, so
+callers decide how to surface the failure.
 """
 
 import asyncio

@@ -14,10 +14,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
-# Only the migration script still talks to Apps Script; the app itself does not,
-# so this is optional and must never block startup.
-APPS_SCRIPT_URL = os.getenv("APPS_SCRIPT_URL")
-
 # Public-facing deployment URL — used to build links the browser/QR points to.
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
 

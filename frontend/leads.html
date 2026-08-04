@@ -749,15 +749,25 @@
                     // --- 2. IMAGES ---
                     else if (colName.includes('photo') && val) { 
                         if (String(val).startsWith('http')) {
+                            // New cards are Cloudinary URLs and render directly; ask
+                            // Cloudinary for a resized copy by injecting a transform.
+                            // Cards migrated from the old backend are Drive links and
+                            // still need Drive's thumbnail endpoint.
+                            const isCloudinary = val.includes('res.cloudinary.com');
                             let imgId = null;
-                            const patterns = [/\/file\/d\/([^/]+)/, /\/d\/([^/]+)/, /id=([^&]+)/];
-                            for (let p of patterns) {
-                                const m = val.match(p);
-                                if (m && m[1]) { imgId = m[1]; break; }
+                            if (!isCloudinary) {
+                                const patterns = [/\/file\/d\/([^/]+)/, /\/d\/([^/]+)/, /id=([^&]+)/];
+                                for (let p of patterns) {
+                                    const m = val.match(p);
+                                    if (m && m[1]) { imgId = m[1]; break; }
+                                }
                             }
-                            
-                            const thumbUrl = imgId ? `https://drive.google.com/thumbnail?id=${imgId}&sz=w200` : val;
-                            const largeUrl = imgId ? `https://drive.google.com/thumbnail?id=${imgId}&sz=w800` : val;
+
+                            const cld = (w) => val.replace('/upload/', `/upload/w_${w},c_limit/`);
+                            const thumbUrl = isCloudinary ? cld(200)
+                                : (imgId ? `https://drive.google.com/thumbnail?id=${imgId}&sz=w200` : val);
+                            const largeUrl = isCloudinary ? cld(800)
+                                : (imgId ? `https://drive.google.com/thumbnail?id=${imgId}&sz=w800` : val);
 
                             td.innerHTML = `
                                 <div class="relative inline-block">
@@ -768,7 +778,7 @@
                                          onmousemove="movePreview(event)"
                                          onmouseleave="hidePreview()"
                                          onclick="window.open('${val}', '_blank')"
-                                         onerror="if(!this.dataset.tried) { this.dataset.tried=1; this.src='https://docs.google.com/uc?id=${imgId}'; } else { this.onerror=null; this.src='https://placehold.co/100x100?text=No+Preview'; }">
+                                         onerror="if(!this.dataset.tried) { this.dataset.tried=1; this.src='${isCloudinary ? val : `https://docs.google.com/uc?id=${imgId}`}'; } else { this.onerror=null; this.src='https://placehold.co/100x100?text=No+Preview'; }">
                                 </div>
                             `;
                             tr.appendChild(td);

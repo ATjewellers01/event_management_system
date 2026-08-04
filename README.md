@@ -1,211 +1,108 @@
-# 📇 Business Card Reader — AI-Powered OCR & Intelligence Platform
+# Event Hub
 
-> **Scan a business card → Get verified company intel in seconds.**
+Lead capture for jewellery trade shows. Staff scan business cards or enter
+visitors by hand; visitors can also self-register by scanning a QR code at the
+stand. Cards are read with OCR and enriched from the web.
 
-An end-to-end system that uses **OpenAI GPT-4o Vision** to extract text from business card images, then enriches the data through a **Deterministic Waterfall Pipeline** — scraping the company's real website, extracting social media links, pulling legal registration data, and structuring everything into a clean, validated JSON payload saved directly to Google Sheets.
+Built for JewelFactory (AT Jewellers) by Botivate.
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)
-![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-blueviolet?logo=openai)
-![License](https://img.shields.io/badge/License-MIT-yellow)
-
----
-
-## ✨ Key Features
-
-| Feature | Description |
-|---------|-------------|
-| 📸 **Dual-Side OCR** | Upload front & back of a business card — GPT-4o Vision reads even stylized, rotated, or inverted text |
-| 🌐 **Website Auto-Discovery** | Extracts the company domain directly from the email address (e.g., `info@company.com` → `company.com`) — zero API dependency |
-| 🕷️ **Deep Website Scraping** | Uses [Jina Reader API](https://jina.ai/reader/) to scrape the official website and extract services, address, and contact info |
-| 📱 **Social Media Extraction** | Regex-based deterministic extraction of Instagram, Facebook, LinkedIn, Twitter/X, YouTube, WhatsApp, Telegram, Pinterest, and Threads links directly from the website footer |
-| 🏛️ **Legal Verification** | Searches ZaubaCorp/Tofler via Google CSE to find GST, CIN, Directors, and incorporation year |
-| 📊 **Confidence Scoring** | Generates a 0-100 confidence score based on validation checks |
-| 📋 **Google Sheets Integration** | Auto-saves all extracted data + card images to a Google Sheet via Apps Script |
-| 🔄 **Multi-Fallback Architecture** | Email domain → Card website → Google CSE fallback chain ensures data is always found |
-
----
-
-## 🏗️ Architecture
+## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                     BUSINESS CARD IMAGE                          │
-│                   (Front + Back, Base64)                          │
-└──────────────────────┬───────────────────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  STEP 1: OCR EXTRACTION (GPT-4o Vision)                          │
-│  → Reads text from card images                                   │
-│  → Outputs: company, name, title, phone, email, address, etc.   │
-└──────────────────────┬───────────────────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  STEP 2: WATERFALL ENRICHMENT PIPELINE                           │
-│                                                                  │
-│  Phase 1: Identity Resolution                                    │
-│  ├── Strategy A: Use website from card directly                  │
-│  ├── Strategy B: Extract domain from email (MOST RELIABLE)       │
-│  └── Strategy C: Google CSE fallback                             │
-│                                                                  │
-│  Phase 2: Deep Scraping (Jina Reader API)                        │
-│  ├── Scrape official website → services, address, contacts       │
-│  └── Scrape ZaubaCorp/Tofler → GST, Directors, founded year     │
-│                                                                  │
-│  Phase 3: Social Link Extraction (Regex)                         │
-│  └── Parse scraped HTML for Instagram, FB, LinkedIn, etc.        │
-│                                                                  │
-│  Phase 4: Google CSE Social Backup                               │
-│  └── Search Google for social profiles if Phase 3 finds none    │
-└──────────────────────┬───────────────────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  STEP 3: STRUCTURED OUTPUT (GPT-4o + Pydantic)                   │
-│  → Merges OCR data + enrichment into validated JSON              │
-│  → Confidence score calculation                                  │
-└──────────────────────┬───────────────────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  STEP 4: GOOGLE SHEETS (Apps Script)                             │
-│  → Saves structured data + card images to spreadsheet            │
-└──────────────────────────────────────────────────────────────────┘
+Browser ──► FastAPI (backend/) ──► Turso        (all data)
+                              ├──► Cloudinary   (card images, WebP)
+                              └──► OpenAI       (OCR + enrichment)
 ```
 
----
+- **Turso (libSQL)** is the only data store: events, team members, scanned
+  cards, visitors and the company profile.
+- **Cloudinary** stores card photos, capped at 1600px and saved as WebP only.
+  WebP rather than AVIF because GPT-4o vision accepts png/jpeg/gif/webp and
+  rejects AVIF — an AVIF-only store would break any future re-OCR of a card.
+- **No response cache.** Turso answers in tens of milliseconds, so a TTL cache
+  would add staleness and invalidation complexity for almost no gain.
 
-## 🛠️ Tech Stack
+Google Sheets, Apps Script and Google Drive were the original backend and have
+been removed. They were the cause of 3-40 second page loads and intermittent
+"stream not found" / "unable to open the file" failures.
 
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Python 3.10+, FastAPI, Uvicorn |
-| **AI/OCR** | OpenAI GPT-4o Vision, Structured Outputs (`beta.parse`) |
-| **Web Scraping** | Jina Reader API (`r.jina.ai`) |
-| **Search** | Google Custom Search API (fallback) |
-| **Frontend** | Vanilla HTML/CSS/JS |
-| **Storage** | Google Sheets via Apps Script |
-| **HTTP Client** | httpx (async), requests |
+## Card pipeline
 
----
+1. **OCR** — GPT-4o vision reads both sides of the card. Output is forced to
+   English/Latin script; Indic-script names are transliterated rather than
+   translated, so `श्री जिनकुशल ज्वेलर्स` becomes `Shri Jinkushal Jewellers`.
+2. **Enrichment** — resolves the company website (email domain → card URL →
+   Google CSE), scrapes it via Jina Reader, extracts social links by regex, and
+   looks up registration data on ZaubaCorp/Tofler.
+3. **Store** — images to Cloudinary, structured row to Turso, with a
+   0-100 confidence score.
 
-## 📂 Project Structure
+Both prompts define every field explicitly and pin card-derived fields against
+web-search overwrite, because a loose prompt put values in the wrong columns.
 
-```
-Business-Card-OCR/
-├── backend/                 # FastAPI backend logic
-│   ├── main.py              # OCR + Enrichment pipeline
-│   ├── requirements.txt     # Python dependencies
-│   └── .env                 # API keys (not committed)
-├── frontend/                # Web Interface files
-│   ├── index.html           # Main upload UI
-│   ├── leads.html           # Leads dashboard
-│   ├── style.css            # UI styling
-│   └── worker.js            # Background sync worker
-├── README.md                # Project overview
-├── SETUP.md                 # Detailed setup instructions
-├── APPS_SCRIPT_GUIDE.md     # Google Sheets setup
-├── FINAL_APPS_SCRIPT.js     # Sheets automation code
-├── vercel.json              # Deployment config
-└── .gitignore               # Git exclusions
-```
+## Pages
 
----
+| Route | What it is |
+|---|---|
+| `/` | Event list, card scanner, New Visitor form, per-event drilldown |
+| `/leads` | Leads Database — all scanned cards and all visitors |
+| `/visitor-form/{eventId}` | Public self-registration form behind the QR code |
+| `/scanner/` | BotivateScanner React app (built separately) |
+| `/api/health` | Database and image-storage status |
 
-## 🚀 Quick Start
+## Setup
+
+Requires Python 3.10 (see `.python-version`).
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/teamai-botivate/Bussiness_Card_Reader.git
-cd Bussiness_Card_Reader
+# 1. Dependencies
+uv venv --python 3.10 .venv
+uv pip install -r requirements.txt
 
-# 2. Create virtual environment
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
+# 2. Configuration
+cp backend/.env.example backend/.env
+#    then fill in the values — that file documents what each one does
 
-# 3. Install dependencies
-# 3. Install dependencies
-pip install -r backend/requirements.txt
-
-# 4. Create .env file at /backend/.env
-# (See SETUP.md for details)
-
-# 5. Run the application
-python run.py
+# 3. Run
+uv run python run.py        # http://127.0.0.1:8000
 ```
 
-Then open `http://127.0.0.1:8000` in your browser and start scanning cards!
+To build the React scanner app (only needed if you change it):
 
-> 📖 For detailed setup instructions, see **[SETUP.md](SETUP.md)**
-
----
-
-## 📡 API Reference
-
-### `POST /ocr`
-
-Processes a business card image and returns enriched, structured data.
-
-**Request Body:**
-```json
-{
-  "base64Image1": "data:image/jpeg;base64,...",
-  "base64Image2": "data:image/jpeg;base64,..."  // optional (back of card)
-}
+```bash
+cd BotivateScanner && npm install && npm run build
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "company": "Grand Imperia",
-    "name": "Rohit Kumar Sahu",
-    "title": "F&B Manager",
-    "phone": "+91 8871003018",
-    "email": "banquetsales@grandimperiahotel.com",
-    "address": "VIP Road, Vishal Nagar, Raipur, Chhattisgarh",
-    "website": "https://www.grandimperiahotel.com",
-    "social_media": "https://www.facebook.com/GrandImperia, https://www.instagram.com/grand.imperia.raipur",
-    "industry": "Hospitality",
-    "services": "Rooms, Amenities, Banquet, Dining",
-    "trust_score": "8",
-    "is_validated": true,
-    "confidence_score": 76
-  }
-}
+`/scanner/` returns 404 until `BotivateScanner/dist` exists.
+
+## Deployment
+
+Production runs on AWS EC2 (`ap-south-1`, same region as the Turso database)
+behind nginx, in a Docker container built from the `Dockerfile`.
+
+```bash
+cd /home/ubuntu/app && git pull origin main
+docker build -t eventhub-app:new .
+docker stop event-hub && docker rm event-hub
+docker run -d --name event-hub --restart unless-stopped \
+  -p 127.0.0.1:8000:8000 --env-file /home/ubuntu/app/backend/.env eventhub-app:new
 ```
 
----
+nginx proxies `event.zold.in` to `127.0.0.1:8000`, so that port mapping must stay
+as above. The instance is registered with AWS SSM, so these steps can also be run
+remotely via `aws ssm send-command`.
 
-## 🔑 Required API Keys
+## Notes
 
-| Key | Purpose | Get it from |
-|-----|---------|-------------|
-| `OPENAI_API_KEY` | GPT-4o Vision OCR + Structured Output | [OpenAI Platform](https://platform.openai.com/api-keys) |
-| `GOOGLE_API_KEY` | Google Custom Search (fallback) | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
-| `GOOGLE_CSE_ID` | Programmable Search Engine ID | [CSE Control Panel](https://programmablesearchengine.google.com/) |
-| `APPS_SCRIPT_URL` | Google Sheets data storage | See [APPS_SCRIPT_GUIDE.md](APPS_SCRIPT_GUIDE.md) |
-
----
-
-## 📄 License
-
-MIT License — feel free to use, modify, and distribute.
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-**Built with ❤️ by [Team AI Botivate](https://github.com/teamai-botivate)**
+- **Row identity.** Cards and visitors are addressed by database primary key,
+  exposed to the frontend as `_id`. The earlier Sheets version updated rows by
+  position, which silently edited the wrong row when rows were added or removed.
+- **Partial updates.** Update endpoints write only the fields present in the
+  request, so the inline Tag dropdown cannot blank the rest of a row.
+- **Tags and Groups** are set from the Customer Data tables after a visitor is
+  created, not on the entry forms.
+- **Pincode.** Both visitor forms auto-fill city and state from the pincode via
+  `api.postalpincode.in`. Both fields stay editable, and a lookup failure never
+  blocks the form.
+- **Connection reuse.** The Turso handshake is ~115ms, which dominated query
+  time, so one connection is shared with a reconnect guard for stale streams.
