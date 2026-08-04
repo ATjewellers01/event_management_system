@@ -12,7 +12,11 @@ from backend.core.config import logger, FRONTEND_DIR, APPS_SCRIPT_URL, PUBLIC_BA
 from backend.core.models import OCRRequest
 from backend.services.ocr_service import extract_card_data
 from backend.services.enrichment_service import run_waterfall_enrichment
-from backend.utils.sheets import submit_to_sheets
+from backend.utils.sheets import submit_to_sheets, submit_to_sheets_async, sheets_json
+from backend.utils.cache import (
+    cache, is_successful, KEY_EVENTS, KEY_COMPANY_PROFILE,
+    key_event, key_event_data,
+)
 
 app = FastAPI(title="Business Card OCR API")
 
@@ -27,6 +31,15 @@ async def public_config():
         "appsScriptUrl": APPS_SCRIPT_URL,
         "publicBaseUrl": PUBLIC_BASE_URL,
     }
+
+@app.get("/api/cache/status")
+async def cache_status():
+    return cache.stats()
+
+@app.post("/api/cache/clear")
+async def cache_clear():
+    cache.clear()
+    return {"success": True, "message": "Cache cleared"}
 
 @app.post("/ocr")
 async def perform_ocr(request: OCRRequest):
@@ -60,10 +73,24 @@ async def perform_ocr(request: OCRRequest):
         # Log the final enriched data to terminal
         import json
         logger.info(f"FINAL DATA TO SAVE:\n{json.dumps(final_data, indent=4)}")
-        
-        submit_to_sheets(payload)
-        
-        return {"success": True, "data": final_data, "confidence_score": confidence_score}
+
+        # The sheet write result was previously discarded, so a failed save still
+        # reported success to the UI and the card silently never appeared.
+        save_resp = await submit_to_sheets_async(payload)
+        saved = bool(save_resp is not None and save_resp.status_code == 200)
+        if saved:
+            # The new card belongs to an event whose data list is now stale.
+            cache.invalidate_prefix("eventdata:")
+        else:
+            logger.error("Card OCR succeeded but the sheet write FAILED — not saved.")
+
+        return {
+            "success": True,
+            "saved": saved,
+            "message": "Card saved." if saved else "Card scanned but saving to the sheet failed.",
+            "data": final_data,
+            "confidence_score": confidence_score,
+        }
 
     except Exception as e:
         logger.error(f"Global Endpoint Error: {e}")
@@ -71,21 +98,30 @@ async def perform_ocr(request: OCRRequest):
 
 @app.get("/get-events")
 async def get_events_list():
-    try:
-        resp = submit_to_sheets({"action": "get_event_list"})
-        if resp and resp.status_code == 200:
-            return resp.json()
+    async def fetch():
+        resp = await submit_to_sheets_async({"action": "get_event_list"})
+        data = sheets_json(resp)
+        if data is not None:
+            return data
         return {"success": False, "message": "Failed to fetch event list"}
+
+    try:
+        return await cache.get_or_fetch(KEY_EVENTS, fetch, should_cache=is_successful)
     except Exception as e:
+        logger.error(f"Get Events Error: {e}")
         return {"success": False, "message": str(e)}
 
 @app.get("/get-event/{event_id}")
 async def get_event_by_id(event_id: str):
-    try:
-        resp = submit_to_sheets({"action": "get_event", "eventId": event_id})
-        if resp and resp.status_code == 200:
-            return resp.json()
+    async def fetch():
+        resp = await submit_to_sheets_async({"action": "get_event", "eventId": event_id})
+        data = sheets_json(resp)
+        if data is not None:
+            return data
         return {"success": False, "message": "Failed to fetch event details"}
+
+    try:
+        return await cache.get_or_fetch(key_event(event_id), fetch, should_cache=is_successful)
     except Exception as e:
         logger.error(f"Get Event Error: {e}")
         return {"success": False, "message": str(e)}
@@ -100,9 +136,11 @@ async def save_event(request: dict):
         }
         
         # Submit to Sheets via existing utility
-        resp = submit_to_sheets(payload)
-        
+        resp = await submit_to_sheets_async(payload)
+
         if resp and resp.status_code == 200:
+            # A new event must show up on the next page load, not after the TTL.
+            cache.invalidate(KEY_EVENTS)
             try:
                 sheet_res = resp.json()
                 return {"success": True, **sheet_res}
@@ -123,10 +161,11 @@ async def submit_lead(request: dict):
             "action": "save_lead",
             "leadData": request.get("leadData")
         }
-        
-        resp = submit_to_sheets(payload)
-        
+
+        resp = await submit_to_sheets_async(payload)
+
         if resp and resp.status_code == 200:
+            cache.invalidate_prefix("eventdata:")
             return {"success": True, "message": "Lead submitted successfully"}
         else:
             raise Exception("Failed to save lead to Google Sheets")
@@ -137,27 +176,39 @@ async def submit_lead(request: dict):
 
 @app.post("/get-event-data")
 async def get_event_specific_data(request: dict):
-    try:
-        payload = {
+    event_id = request.get("eventId")
+    event_name = request.get("eventName")
+
+    async def fetch():
+        resp = await submit_to_sheets_async({
             "action": "get_event_data",
-            "eventId": request.get("eventId"),
-            "eventName": request.get("eventName")
-        }
-        resp = submit_to_sheets(payload)
-        if resp and resp.status_code == 200:
-            return resp.json()
+            "eventId": event_id,
+            "eventName": event_name,
+        })
+        data = sheets_json(resp)
+        if data is not None:
+            return data
         return {"success": False, "message": "Failed to fetch event data"}
+
+    try:
+        return await cache.get_or_fetch(
+            key_event_data(event_id, event_name), fetch, should_cache=is_successful
+        )
     except Exception as e:
         logger.error(f"Get Event Data Error: {e}")
         return {"success": False, "message": str(e)}
 
 @app.get("/get-company-profile")
 async def get_company_profile():
-    try:
-        resp = submit_to_sheets({"action": "get_company_profile"})
-        if resp and resp.status_code == 200:
-            return resp.json()
+    async def fetch():
+        resp = await submit_to_sheets_async({"action": "get_company_profile"})
+        data = sheets_json(resp)
+        if data is not None:
+            return data
         return {"success": False, "message": "Failed to fetch profile"}
+
+    try:
+        return await cache.get_or_fetch(KEY_COMPANY_PROFILE, fetch, should_cache=is_successful)
     except Exception as e:
         logger.error(f"Get Company Profile Error: {e}")
         return {"success": False, "message": str(e)}
@@ -169,8 +220,9 @@ async def save_company_profile(request: dict):
             "action": "save_company_profile",
             "profileData": request.get("profileData")
         }
-        resp = submit_to_sheets(payload)
+        resp = await submit_to_sheets_async(payload)
         if resp and resp.status_code == 200:
+            cache.invalidate(KEY_COMPANY_PROFILE)
             return resp.json()
         return {"success": False, "message": "Failed to save profile"}
     except Exception as e:
@@ -184,8 +236,10 @@ async def submit_visitor_and_get_contact(request: dict):
             "action": "save_visitor_and_get_contact",
             "visitorData": request
         }
-        resp = submit_to_sheets(payload)
+        resp = await submit_to_sheets_async(payload)
         if resp and resp.status_code == 200:
+            # A new visitor changes the per-event card/visitor lists.
+            cache.invalidate_prefix("eventdata:")
             return resp.json()
         return {"success": False, "message": "Failed to process visitor data"}
     except Exception as e:
@@ -199,8 +253,12 @@ async def delete_event(event_id: str):
             "action": "delete_event",
             "eventId": event_id
         }
-        resp = submit_to_sheets(payload)
+        resp = await submit_to_sheets_async(payload)
         if resp and resp.status_code == 200:
+            # Deleting an event removes its cards and visitors too, so clear the
+            # list, that event's own entry, and every per-event data key.
+            cache.invalidate(KEY_EVENTS, key_event(event_id))
+            cache.invalidate_prefix("eventdata:")
             return resp.json()
         return {"success": False, "message": "Failed to delete event"}
     except Exception as e:
@@ -215,8 +273,9 @@ async def update_visitor(visitor_id: str, request: dict):
             "visitorId": visitor_id,
             "visitorData": request
         }
-        resp = submit_to_sheets(payload)
+        resp = await submit_to_sheets_async(payload)
         if resp and resp.status_code == 200:
+            cache.invalidate_prefix("eventdata:")
             return resp.json()
         return {"success": False, "message": "Failed to update visitor"}
     except Exception as e:
@@ -231,8 +290,9 @@ async def update_card(card_id: str, request: dict):
             "cardId": card_id,
             "cardData": request
         }
-        resp = submit_to_sheets(payload)
+        resp = await submit_to_sheets_async(payload)
         if resp and resp.status_code == 200:
+            cache.invalidate_prefix("eventdata:")
             return resp.json()
         return {"success": False, "message": "Failed to update card"}
     except Exception as e:

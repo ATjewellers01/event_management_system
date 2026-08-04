@@ -37,7 +37,18 @@ self.onmessage = async function(event) {
 
         const ocrResult = await response.json();
         console.log('[Worker] OCR and Validation successful:', ocrResult);
-        
+
+        // The backend can extract the card fine but still fail to write the row
+        // to the sheet. Treat that as an error so the user isn't told "saved"
+        // when nothing was saved.
+        if (ocrResult && ocrResult.saved === false) {
+            self.postMessage({
+                status: 'error',
+                message: ocrResult.message || 'Card scanned but saving failed — please retry.'
+            });
+            return;
+        }
+
         self.postMessage({ status: 'success', data: ocrResult });
 
     } catch (err) {
