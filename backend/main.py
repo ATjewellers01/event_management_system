@@ -15,7 +15,7 @@ from backend.services.enrichment_service import run_waterfall_enrichment
 from backend.utils.sheets import submit_to_sheets, submit_to_sheets_async, sheets_json
 from backend.utils.cache import (
     cache, is_successful, KEY_EVENTS, KEY_COMPANY_PROFILE,
-    key_event, key_event_data,
+    key_event, key_event_data, key_sheet, invalidate_row_data,
 )
 
 app = FastAPI(title="Business Card OCR API")
@@ -80,7 +80,7 @@ async def perform_ocr(request: OCRRequest):
         saved = bool(save_resp is not None and save_resp.status_code == 200)
         if saved:
             # The new card belongs to an event whose data list is now stale.
-            cache.invalidate_prefix("eventdata:")
+            invalidate_row_data()
         else:
             logger.error("Card OCR succeeded but the sheet write FAILED — not saved.")
 
@@ -165,7 +165,7 @@ async def submit_lead(request: dict):
         resp = await submit_to_sheets_async(payload)
 
         if resp and resp.status_code == 200:
-            cache.invalidate_prefix("eventdata:")
+            invalidate_row_data()
             return {"success": True, "message": "Lead submitted successfully"}
         else:
             raise Exception("Failed to save lead to Google Sheets")
@@ -196,6 +196,46 @@ async def get_event_specific_data(request: dict):
         )
     except Exception as e:
         logger.error(f"Get Event Data Error: {e}")
+        return {"success": False, "message": str(e)}
+
+@app.post("/read-sheet")
+async def read_sheet(request: dict):
+    """Cached read of a whole sheet tab, used by the Leads Database page.
+
+    That page previously called Apps Script straight from the browser with a 10s
+    timeout, so it got no caching and timed out constantly (Apps Script often
+    needs 12-40s). Routing it through here gives it the shared cache and a
+    server-side timeout that matches reality.
+    """
+    sheet_name = (request.get("sheetName") or "").strip()
+    if not sheet_name:
+        return {"success": False, "message": "sheetName is required"}
+
+    # Guard against typos silently returning an empty table: getSheetByName is
+    # case-sensitive, so 'Event AI Card' finds nothing while 'Event Ai Card' works.
+    KNOWN_SHEETS = {
+        "event ai card": "Event Ai Card",
+        "visitor details": "Visitor Details",
+        "ai card": "Ai Card",
+        "event details": "Event Details",
+        "company profile": "Company Profile",
+    }
+    canonical = KNOWN_SHEETS.get(sheet_name.lower())
+    if canonical and canonical != sheet_name:
+        logger.info("Sheet name '%s' corrected to '%s'", sheet_name, canonical)
+        sheet_name = canonical
+
+    async def fetch():
+        resp = await submit_to_sheets_async({"action": "read", "sheetName": sheet_name})
+        data = sheets_json(resp)
+        if data is not None:
+            return data
+        return {"success": False, "message": f"Failed to read sheet '{sheet_name}'"}
+
+    try:
+        return await cache.get_or_fetch(key_sheet(sheet_name), fetch, should_cache=is_successful)
+    except Exception as e:
+        logger.error(f"Read Sheet Error ({sheet_name}): {e}")
         return {"success": False, "message": str(e)}
 
 @app.get("/get-company-profile")
@@ -239,7 +279,7 @@ async def submit_visitor_and_get_contact(request: dict):
         resp = await submit_to_sheets_async(payload)
         if resp and resp.status_code == 200:
             # A new visitor changes the per-event card/visitor lists.
-            cache.invalidate_prefix("eventdata:")
+            invalidate_row_data()
             return resp.json()
         return {"success": False, "message": "Failed to process visitor data"}
     except Exception as e:
@@ -258,7 +298,7 @@ async def delete_event(event_id: str):
             # Deleting an event removes its cards and visitors too, so clear the
             # list, that event's own entry, and every per-event data key.
             cache.invalidate(KEY_EVENTS, key_event(event_id))
-            cache.invalidate_prefix("eventdata:")
+            invalidate_row_data()
             return resp.json()
         return {"success": False, "message": "Failed to delete event"}
     except Exception as e:
@@ -275,7 +315,7 @@ async def update_visitor(visitor_id: str, request: dict):
         }
         resp = await submit_to_sheets_async(payload)
         if resp and resp.status_code == 200:
-            cache.invalidate_prefix("eventdata:")
+            invalidate_row_data()
             return resp.json()
         return {"success": False, "message": "Failed to update visitor"}
     except Exception as e:
@@ -292,7 +332,7 @@ async def update_card(card_id: str, request: dict):
         }
         resp = await submit_to_sheets_async(payload)
         if resp and resp.status_code == 200:
-            cache.invalidate_prefix("eventdata:")
+            invalidate_row_data()
             return resp.json()
         return {"success": False, "message": "Failed to update card"}
     except Exception as e:

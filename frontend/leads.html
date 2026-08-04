@@ -596,13 +596,16 @@
         }
 
         async function loadData() {
-            // Ensure /api/config has loaded so APPS_SCRIPT_URL is set.
+            // Wait for /api/config so PUBLIC_BASE_URL is set (used by the QR links).
+            // Sheet data itself now comes from our own /read-sheet endpoint.
             await configReady;
             const thead = document.getElementById('tableHead');
             const tbody = document.getElementById('tableBody');
 
             const colKeys = currentTab === 'leads' ? LEADS_COL_KEYS : EVENTS_COL_KEYS;
-            const sheetName = currentTab === 'leads' ? 'Event AI Card' : 'Visitor Details';
+            // 'Event Ai Card' — getSheetByName is case-sensitive, so the old
+            // 'Event AI Card' matched no tab and silently returned zero rows.
+            const sheetName = currentTab === 'leads' ? 'Event Ai Card' : 'Visitor Details';
 
             thead.innerHTML = `<tr>${colKeys.map(k => `<th style="${k[0] === 'S No.' ? 'width: 60px; text-align: center;' : ''}">${k[0]}</th>`).join('')}</tr>`;
             
@@ -619,8 +622,10 @@
                 tbody.appendChild(tr);
             }
 
-            // Helper for fetch with timeout
-            const fetchWithTimeout = (url, options, timeout = 10000) => {
+            // 60s, not 10s: this goes through our backend, which caches the result,
+            // but a COLD read still has to wait on Apps Script and that regularly
+            // takes 12-40s. The old 10s limit guaranteed a timeout on first load.
+            const fetchWithTimeout = (url, options, timeout = 60000) => {
                 return Promise.race([
                     fetch(url, options),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), timeout))
@@ -631,12 +636,14 @@
             let json;
 
             try {
-                // Use POST for reliability and to pass sheetName correctly
+                // Go via our own backend rather than calling Apps Script directly,
+                // so this page shares the server-side cache (~2ms once warm) instead
+                // of paying the full Apps Script round-trip on every load.
                 console.log(`Attempting to fetch ${sheetName}...`);
-                response = await fetchWithTimeout(APPS_SCRIPT_URL, {
+                response = await fetchWithTimeout('/read-sheet', {
                     method: 'POST',
-                    body: JSON.stringify({ action: 'read', sheetName: sheetName }),
-                    headers: { "Content-Type": "text/plain;charset=utf-8" }
+                    body: JSON.stringify({ sheetName: sheetName }),
+                    headers: { "Content-Type": "application/json" }
                 });
                 
                 const text = await response.text();

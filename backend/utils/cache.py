@@ -128,6 +128,21 @@ def key_event_data(event_id: str, event_name: str) -> str:
     return f"eventdata:{event_id or ''}|{event_name or ''}"
 
 
+def key_sheet(sheet_name: str) -> str:
+    return f"sheet:{sheet_name}"
+
+
+def invalidate_row_data() -> None:
+    """Clear every cache entry that could contain card or visitor rows.
+
+    Any write to a card or visitor affects both the per-event drilldown
+    ('eventdata:') and the whole-tab reads the Leads page uses ('sheet:'), so
+    they must always be cleared together — dropping one leaves the other stale.
+    """
+    cache.invalidate_prefix("eventdata:")
+    cache.invalidate_prefix("sheet:")
+
+
 def is_successful(payload: Any) -> bool:
     """True only for an Apps Script response that actually succeeded."""
     return isinstance(payload, dict) and payload.get("success") is True
