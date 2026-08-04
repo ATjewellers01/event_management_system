@@ -241,42 +241,67 @@ def main():
             return 1
         print(f"Turso connected. Existing tables: {status.get('tables') or 'none'}")
 
-        conn = get_connection()
-        if conn is None or not init_schema(conn):
+        if not init_schema():
             print("\nERROR: Could not initialise the Turso schema.")
             return 1
         print("Schema ready.\n")
 
+    # IMPORTANT: fetch from Sheets FIRST, then open a connection per target and
+    # commit immediately. Turso drops the connection stream if it sits idle while
+    # holding an uncommitted transaction, and an Apps Script read can take 30s+.
+    # Holding one connection across all fetch/write cycles fails with
+    # "stream not found".
     results, failures = {}, []
     for target in selected:
         sheet_name, loader = TARGETS[target]
         print(f"[{target}] sheet '{sheet_name}'")
+
         try:
             rows = fetch_sheet(sheet_name)
-            results[target] = loader(conn, rows, dry_run=args.dry_run)
         except Exception as e:
-            print(f"  FAILED: {e}")
+            print(f"  FAILED (sheet read): {e}")
             failures.append(target)
+            continue
 
-    if conn is not None and not failures:
-        run_at = datetime.now(timezone.utc).isoformat()
-        for target, count in results.items():
+        if args.dry_run:
+            try:
+                results[target] = loader(None, rows, dry_run=True)
+            except Exception as e:
+                print(f"  FAILED (parse): {e}")
+                failures.append(target)
+            continue
+
+        conn = None
+        try:
+            conn = get_connection()
+            if conn is None:
+                raise RuntimeError("could not open a Turso connection")
+            count = loader(conn, rows, dry_run=False)
             conn.execute(
                 "INSERT INTO migration_log (sheet_name,row_count,run_at,notes) VALUES (?,?,?,?)",
-                (TARGETS[target][0], count, run_at, f"target={target}"),
+                (sheet_name, count, datetime.now(timezone.utc).isoformat(), f"target={target}"),
             )
-        conn.commit()
-        print("\nCommitted.")
-    elif conn is not None:
-        # Don't leave a half-migrated database behind.
-        conn.rollback()
-        print("\nRolled back — some targets failed.")
-
-    if conn is not None:
-        try:
-            conn.close()
-        except Exception:
-            pass
+            # Commit before the next (slow) sheet fetch, so no transaction is
+            # ever left open across a long network wait.
+            conn.commit()
+            results[target] = count
+            print(f"  committed {count}")
+        except Exception as e:
+            print(f"  FAILED (write): {type(e).__name__}: {e}")
+            failures.append(target)
+            if conn is not None:
+                try:
+                    conn.rollback()
+                except Exception:
+                    # The stream may already be gone; nothing was committed, so
+                    # there is nothing to undo.
+                    pass
+        finally:
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     print("\n" + "=" * 62)
     for target in selected:
@@ -286,7 +311,9 @@ def main():
 
     if failures:
         print(f"\n{len(failures)} target(s) failed: {', '.join(failures)}")
-        print("Apps Script reads fail intermittently — retrying often just works.")
+        print("Each target commits independently, so re-run just the failed ones:")
+        print(f"  uv run python -m backend.scripts.migrate_sheets_to_turso "
+              + " ".join(f"--only {t}" for t in failures))
         return 1
     print("\nDone." if not args.dry_run else "\nDry run complete — nothing written.")
     return 0
