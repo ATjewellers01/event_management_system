@@ -144,10 +144,15 @@
             to { background-position-x: -200%; }
         }
 
-        /* DB table horizontal scroll helpers */
+        /* DB table scroll helpers.
+           The container scrolls in BOTH axes: horizontally for the 23 columns,
+           and vertically so the header can stay pinned via position:sticky.
+           (With overflow-y:hidden the page scrolled instead and sticky had no
+           scroll container to stick within.) */
         .db-scroll-wrap {
             overflow-x: auto;
-            overflow-y: hidden;
+            overflow-y: auto;
+            max-height: min(68vh, 780px);
             -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
             scrollbar-color: #cbd5e1 transparent;
@@ -155,6 +160,7 @@
         .db-scroll-wrap::-webkit-scrollbar {
             display: block;
             height: 10px;
+            width: 10px;
         }
         .db-scroll-wrap::-webkit-scrollbar-thumb {
             background: #cbd5e1;
@@ -165,6 +171,46 @@
         }
         .db-scroll-wrap table {
             min-width: max-content;
+        }
+
+        /* Pin the header while scrolling down a long list. */
+        .db-scroll-wrap thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #f8fafc;
+            /* A real border would scroll away with the cell, so draw the rule
+               with a shadow that stays attached to the sticky header. */
+            box-shadow: inset 0 -2px 0 #e2e8f0;
+        }
+
+        /* Zebra striping + hover, so the eye can track one row across 23 columns. */
+        .db-scroll-wrap tbody tr:nth-child(even) {
+            background: #fcfdfe;
+        }
+        .db-scroll-wrap tbody tr:hover {
+            background: #eff6ff;
+        }
+        .db-scroll-wrap tbody tr {
+            transition: background 0.12s ease;
+        }
+
+        /* Tighter rows so more fit on screen. Overrides the inline padding on
+           each cell, which would otherwise win on specificity grounds. */
+        .db-scroll-wrap tbody td {
+            padding-top: 9px !important;
+            padding-bottom: 9px !important;
+            /* Row separator lives here rather than inline: the cards table set
+               it on <tr> (unreliable with border-collapse:separate) and the
+               visitors table repeated it on every cell. */
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .db-scroll-wrap tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .db-scroll-wrap thead th {
+            padding-top: 11px !important;
+            padding-bottom: 11px !important;
         }
     </style>
 </head>
@@ -260,17 +306,20 @@
                         QR Visitors
                     </button>
                 </div>
-                <!-- Export to Excel -->
-                <button onclick="exportEventDbToExcel()" id="dbExportBtn" class="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-black uppercase tracking-widest rounded-xl bg-emerald-600 text-white shadow-md hover:bg-emerald-700 active:scale-95 transition-all">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"></path></svg>
-                    Export to Excel
-                </button>
+                <div class="flex items-center gap-3">
+                    <span id="dbRowCount" class="text-[11px] font-bold uppercase tracking-widest text-gray-400"></span>
+                    <!-- Export to Excel -->
+                    <button onclick="exportEventDbToExcel()" id="dbExportBtn" class="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-black uppercase tracking-widest rounded-xl bg-emerald-600 text-white shadow-md hover:bg-emerald-700 active:scale-95 transition-all">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"></path></svg>
+                        Export to Excel
+                    </button>
+                </div>
             </div>
 
 
 
             <!-- Cards Table -->
-            <div id="db-cards-content" class="db-scroll-wrap rounded-3xl border border-gray-100 shadow-sm">
+            <div id="db-cards-content" class="db-scroll-wrap rounded-2xl border border-gray-100 shadow-sm">
                 <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr style="text-align: left; background: #f8fafc; white-space: nowrap;">
@@ -306,7 +355,7 @@
             </div>
 
             <!-- Visitors Table -->
-            <div id="db-visitors-content" class="db-scroll-wrap hidden">
+            <div id="db-visitors-content" class="db-scroll-wrap hidden rounded-2xl border border-gray-100 shadow-sm">
                 <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr style="text-align: left; background: #f8fafc; white-space: nowrap;">
@@ -1063,6 +1112,18 @@
                     vB.className = activeClasses;
                     cB.className = inactiveClasses;
                 }
+                updateDbRowCount();
+            };
+
+            // Shows how many rows the active tab holds, so the list size is
+            // obvious without scrolling to the bottom.
+            window.updateDbRowCount = () => {
+                const el = document.getElementById('dbRowCount');
+                if (!el) return;
+                const isCards = dbCurrentTab === 'cards';
+                const n = (isCards ? dbCurrentCards : dbCurrentVisitors).length;
+                const noun = isCards ? 'card' : 'visitor';
+                el.textContent = n ? `${n} ${noun}${n === 1 ? '' : 's'}` : '';
             };
 
             window.exportEventDbToExcel = () => {
@@ -1153,6 +1214,7 @@
                     if (res.success) {
                         dbCurrentCards = Array.isArray(res.cards) ? res.cards : [];
                         dbCurrentVisitors = Array.isArray(res.visitors) ? res.visitors : [];
+                        updateDbRowCount();
                         // Populate Cards
                         res.cards.forEach((card, idx) => {
                             const img1 = card['Card Photo 1'] ? `<a href="${card['Card Photo 1']}" target="_blank" title="Photo 1" style="color:#2563eb;margin-right:8px;"><svg style="width:16px;height:16px;display:inline;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2"></path></svg></a>` : '';
