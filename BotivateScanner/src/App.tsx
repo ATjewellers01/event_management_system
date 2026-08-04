@@ -8,12 +8,6 @@ import jsPDF from "jspdf"
 // @ts-ignore - QRCode library doesn't have TypeScript definitions
 import QRCodeLib from "qrcode"
 
-// Read from Vite env at build time. Set VITE_APPS_SCRIPT_URL in
-// BotivateScanner/.env or pass --build-arg in Docker. Falls back to empty
-// string so missing config surfaces as a clear network error rather than
-// silently hitting an unrelated deployment.
-const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL || "";
-
 interface ContactInfo {
   firstName: string
   lastName: string
@@ -239,11 +233,9 @@ function App() {
 
   const fetchEventData = async (id: string) => {
     try {
-      const response = await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'get_event', eventId: id }),
-        headers: { "Content-Type": "text/plain;charset=utf-8" }
-      });
+      // Goes through our own backend (Turso), not Apps Script. Same response
+      // shape, so the field mapping below is unchanged.
+      const response = await fetch(`/get-event/${encodeURIComponent(id)}`);
       const res = await response.json();
       if (res.success && res.data) {
         const d = res.data;

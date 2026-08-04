@@ -1,6 +1,5 @@
 FROM node:20-alpine AS scanner-build
-ARG VITE_APPS_SCRIPT_URL
-ENV VITE_APPS_SCRIPT_URL=${VITE_APPS_SCRIPT_URL}
+# No build args needed: the scanner talks to this app's own API, not Apps Script.
 WORKDIR /app/BotivateScanner
 COPY BotivateScanner/package*.json ./
 RUN npm install
