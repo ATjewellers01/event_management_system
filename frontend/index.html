@@ -517,47 +517,13 @@
                             <label class="input-label">Customer Name <span class="text-red-500">*</span></label>
                             <input type="text" id="nv_name" class="input-field" required>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="input-label">WhatsApp No.</label>
-                                <input type="tel" id="nv_whatsapp" class="input-field" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="Enter a 10-digit phone number">
-                            </div>
-                            <div>
-                                <label class="input-label">Mobile No.</label>
-                                <input type="tel" id="nv_mobile" class="input-field" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="Enter a 10-digit phone number">
-                            </div>
+                        <div>
+                            <label class="input-label">Mobile No. <span class="text-red-500">*</span></label>
+                            <input type="tel" id="nv_mobile" class="input-field" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="Enter a 10-digit mobile number" required>
                         </div>
                         <div>
-                            <label class="input-label">Group <span class="text-red-500">*</span></label>
-                            <select id="nv_groups" class="input-field" required>
-                                <option value="">Select group</option>
-                                <option>Atw</option>
-                                <option>Customer</option>
-                                <option>Branch Division</option>
-                                <option>CL Customer</option>
-                                <option>Jf Customer</option>
-                                <option>Karigar</option>
-                                <option>Staff</option>
-                                <option>Supplier</option>
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="input-label">Tag</label>
-                                <select id="nv_tag_category" class="input-field" onchange="onNewVisitorTagCategoryChange()">
-                                    <option value="">Select</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="input-label">&nbsp;</label>
-                                <select id="nv_tag_sub" class="input-field">
-                                    <option value="">Select</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="input-label">Pincode</label>
-                            <input type="text" id="nv_pincode" class="input-field" inputmode="numeric" pattern="[0-9]{6}" maxlength="6">
+                            <label class="input-label">Pincode <span class="text-red-500">*</span></label>
+                            <input type="text" id="nv_pincode" class="input-field" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" title="Enter a 6-digit pincode" required>
                             <p id="nv_pincode_status" class="text-xs text-gray-400 mt-1"></p>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
@@ -571,8 +537,8 @@
                             </div>
                         </div>
                         <div>
-                            <label class="input-label">Address <span class="text-red-500">*</span></label>
-                            <input type="text" id="nv_address" class="input-field" required>
+                            <label class="input-label">Address</label>
+                            <input type="text" id="nv_address" class="input-field">
                         </div>
                         <div class="pt-2">
                             <button type="submit" id="nvSubmitBtn" class="btn-primary w-full" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;padding:14px;border-radius:14px;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;border:none;cursor:pointer;">
@@ -1075,21 +1041,9 @@
                 saveTag(kind, idx, `${category} - ${sub}`);
             };
 
-            window.onNewVisitorTagCategoryChange = () => {
-                const category = document.getElementById('nv_tag_category').value;
-                const subSelect = document.getElementById('nv_tag_sub');
-                const subValues = TAG_CATEGORIES[category] || [];
-                subSelect.innerHTML = ['<option value="">Select</option>']
-                    .concat(subValues.map(s => `<option value="${s}">${s}</option>`)).join('');
-                subSelect.disabled = subValues.length === 0;
-            };
-
-            (function initNewVisitorTagCategory() {
-                const catSelect = document.getElementById('nv_tag_category');
-                if (!catSelect) return;
-                catSelect.innerHTML = ['<option value="">Select</option>']
-                    .concat(Object.keys(TAG_CATEGORIES).map(c => `<option value="${c}">${c}</option>`)).join('');
-            })();
+            // Tag is not set when creating a visitor — it is applied afterwards
+            // from the Customer Data tables, so the New Visitor form has no Tag
+            // dropdown and needs no cascade handler here.
 
             wirePincodeAutofill('nv_pincode', 'nv_city', 'nv_state', 'nv_pincode_status');
 
@@ -1361,42 +1315,40 @@
                     if (btnText) btnText.classList.add('hidden');
                     if (btnLdr) btnLdr.classList.remove('hidden');
 
-                    const nvWhatsapp = document.getElementById('nv_whatsapp').value.trim();
                     const nvMobile = document.getElementById('nv_mobile').value.trim();
                     const nvPincode = document.getElementById('nv_pincode').value.trim();
-                    if (!validatePhoneIfPresent(nvWhatsapp) || !validatePhoneIfPresent(nvMobile)) {
-                        toastMe('Mobile/WhatsApp must be exactly 10 digits.', '#ef4444');
+
+                    const releaseBtn = () => {
                         if (btn) btn.disabled = false;
                         if (btnText) btnText.classList.remove('hidden');
                         if (btnLdr) btnLdr.classList.add('hidden');
+                    };
+
+                    // Mobile and pincode are mandatory, so require a valid value
+                    // rather than merely validating a value that is present.
+                    if (!/^\d{10}$/.test(nvMobile)) {
+                        toastMe('Mobile number must be exactly 10 digits.', '#ef4444');
+                        releaseBtn();
                         return;
                     }
-                    if (!validatePincodeIfPresent(nvPincode)) {
+                    if (!/^\d{6}$/.test(nvPincode)) {
                         toastMe('Pincode must be exactly 6 digits.', '#ef4444');
-                        if (btn) btn.disabled = false;
-                        if (btnText) btnText.classList.remove('hidden');
-                        if (btnLdr) btnLdr.classList.add('hidden');
+                        releaseBtn();
                         return;
                     }
 
+                    // Groups and Tag are intentionally not collected here — they are
+                    // filled in later from the Customer Data screen.
                     const payload = {
                         eventId: ev.id,
                         source: 'New Visitor',
                         companyName: document.getElementById('nv_company').value,
                         customerName: document.getElementById('nv_name').value,
-                        whatsappNo: nvWhatsapp,
-                        groups: document.getElementById('nv_groups').value,
                         pincode: nvPincode,
                         state: document.getElementById('nv_state').value,
                         city: document.getElementById('nv_city').value,
                         address: document.getElementById('nv_address').value,
-                        mobileNo: nvMobile,
-                        tag: (() => {
-                            const category = document.getElementById('nv_tag_category').value;
-                            const sub = document.getElementById('nv_tag_sub').value;
-                            if (!category) return '';
-                            return sub ? `${category} - ${sub}` : category;
-                        })()
+                        mobileNo: nvMobile
                     };
 
                     try {
