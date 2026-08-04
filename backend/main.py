@@ -1,3 +1,14 @@
+"""Event Hub API.
+
+Data lives in Turso; card images live in Cloudinary. Google Sheets, Apps Script
+and Google Drive are no longer part of any request path — that stack was the
+source of the 3-40s page loads and the intermittent "stream not found" /
+"unable to open the file" failures.
+
+No response cache: Turso answers in tens of milliseconds, so a TTL cache would
+save almost nothing while adding staleness and invalidation complexity.
+"""
+
 import os
 import sys
 from fastapi import FastAPI, HTTPException
@@ -8,336 +19,200 @@ import httpx
 # Fix path to allow importing from 'backend'
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.core.config import logger, FRONTEND_DIR, APPS_SCRIPT_URL, PUBLIC_BASE_URL
+from backend.core.config import logger, FRONTEND_DIR, PUBLIC_BASE_URL
 from backend.core.models import OCRRequest
 from backend.services.ocr_service import extract_card_data
 from backend.services.enrichment_service import run_waterfall_enrichment
-from backend.utils.sheets import submit_to_sheets, submit_to_sheets_async, sheets_json
-from backend.utils.cache import (
-    cache, is_successful, KEY_EVENTS, KEY_COMPANY_PROFILE,
-    key_event, key_event_data, key_sheet, invalidate_row_data,
-)
+from backend.utils import repository as repo
+from backend.utils import images
+from backend.utils.turso import check_connection_async, init_schema
 
-app = FastAPI(title="Business Card OCR API")
+app = FastAPI(title="Event Hub API")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
 )
 
+
+@app.on_event("startup")
+async def on_startup():
+    """Fail loudly at boot if the database is unreachable.
+
+    Turso is now the only data store, so a broken connection means a broken app.
+    Better to see it in the logs at startup than as mystery 500s later.
+    """
+    status = await check_connection_async()
+    if status.get("ok"):
+        logger.info("Turso connected. Tables: %s", ", ".join(status.get("tables", [])))
+    else:
+        logger.error("TURSO UNAVAILABLE AT STARTUP — %s", status.get("reason"))
+    logger.info("Image storage: %s", images.status())
+
+
 @app.get("/api/config")
 async def public_config():
+    # appsScriptUrl is intentionally gone: nothing in the frontend should call
+    # Apps Script any more.
+    return {"publicBaseUrl": PUBLIC_BASE_URL}
+
+
+@app.get("/api/health")
+async def health():
+    db = await check_connection_async()
     return {
-        "appsScriptUrl": APPS_SCRIPT_URL,
-        "publicBaseUrl": PUBLIC_BASE_URL,
+        "database": db,
+        "images": images.status(),
     }
 
-@app.get("/api/cache/status")
-async def cache_status():
-    return cache.stats()
 
-@app.post("/api/cache/clear")
-async def cache_clear():
-    cache.clear()
-    return {"success": True, "message": "Cache cleared"}
+def _row_id(raw: str):
+    """Parse the row id from a path param.
+
+    The frontend historically sent '<index>_<timestamp>'; it now sends the real
+    primary key. Accept both so an older cached page cannot 500.
+    """
+    token = str(raw).split("_")[0]
+    try:
+        return int(token)
+    except (TypeError, ValueError):
+        return None
+
 
 @app.post("/ocr")
 async def perform_ocr(request: OCRRequest):
     try:
         # 1. OCR
         ocr_data = await extract_card_data(request.base64Image1, request.base64Image2)
-        
+
         # 2. Enrichment
         final_data = await run_waterfall_enrichment(ocr_data)
-        
+
         # 3. Stats & Score
         confidence_score = 0
-        if final_data.get("is_validated"): confidence_score += 30
-        if final_data.get("website"): confidence_score += 20
+        if final_data.get("is_validated"):
+            confidence_score += 30
+        if final_data.get("website"):
+            confidence_score += 20
         try:
-             trust_val = int(str(final_data.get("trust_score", "0")).split('/')[0].strip())
-             confidence_score += (trust_val * 2) 
-        except: pass
-        if final_data.get("social_media"): confidence_score += 10
-        
-        # 4. Sheet Submission
-        payload = {
-            "action": "save_event_card" if request.eventMode else "save",
-            "extractedData": final_data,
-            "confidence_score": confidence_score,
-            "photo1Base64": request.base64Image1, 
-            "photo2Base64": request.base64Image2 or "",
-            "eventInfo": request.eventInfo
-        }
-        
-        # Log the final enriched data to terminal
-        import json
-        logger.info(f"FINAL DATA TO SAVE:\n{json.dumps(final_data, indent=4)}")
+            trust_val = int(str(final_data.get("trust_score", "0")).split('/')[0].strip())
+            confidence_score += (trust_val * 2)
+        except Exception:
+            pass
+        if final_data.get("social_media"):
+            confidence_score += 10
 
-        # The sheet write result was previously discarded, so a failed save still
-        # reported success to the UI and the card silently never appeared.
-        save_resp = await submit_to_sheets_async(payload)
-        saved = bool(save_resp is not None and save_resp.status_code == 200)
-        if saved:
-            # The new card belongs to an event whose data list is now stale.
-            invalidate_row_data()
-        else:
-            logger.error("Card OCR succeeded but the sheet write FAILED — not saved.")
+        event_info = request.eventInfo or {}
+
+        # 4. Store the images (optimised WebP) and the row.
+        photo1_url, photo2_url = await images.upload_card_images_async(
+            request.base64Image1, request.base64Image2 or "", event_info.get("id") or ""
+        )
+
+        result = await repo.run(
+            repo.save_event_card, final_data, photo1_url or "", photo2_url or "", event_info
+        )
+        saved = bool(result.get("success"))
+        if not saved:
+            logger.error("Card OCR succeeded but the DB write FAILED: %s", result.get("message"))
 
         return {
             "success": True,
             "saved": saved,
-            "message": "Card saved." if saved else "Card scanned but saving to the sheet failed.",
+            "message": "Card saved." if saved else f"Card scanned but saving failed: {result.get('message')}",
+            "imagesStored": bool(photo1_url or photo2_url),
             "data": final_data,
             "confidence_score": confidence_score,
         }
 
     except Exception as e:
-        logger.error(f"Global Endpoint Error: {e}")
+        logger.error(f"OCR Endpoint Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/get-events")
 async def get_events_list():
-    async def fetch():
-        resp = await submit_to_sheets_async({"action": "get_event_list"})
-        data = sheets_json(resp)
-        if data is not None:
-            return data
-        return {"success": False, "message": "Failed to fetch event list"}
+    return await repo.run(repo.get_event_list)
 
-    try:
-        return await cache.get_or_fetch(KEY_EVENTS, fetch, should_cache=is_successful)
-    except Exception as e:
-        logger.error(f"Get Events Error: {e}")
-        return {"success": False, "message": str(e)}
 
 @app.get("/get-event/{event_id}")
 async def get_event_by_id(event_id: str):
-    async def fetch():
-        resp = await submit_to_sheets_async({"action": "get_event", "eventId": event_id})
-        data = sheets_json(resp)
-        if data is not None:
-            return data
-        return {"success": False, "message": "Failed to fetch event details"}
+    return await repo.run(repo.get_event_by_id, event_id)
 
-    try:
-        return await cache.get_or_fetch(key_event(event_id), fetch, should_cache=is_successful)
-    except Exception as e:
-        logger.error(f"Get Event Error: {e}")
-        return {"success": False, "message": str(e)}
 
 @app.post("/save-event")
 async def save_event(request: dict):
-    try:
-        # Request is expected to contain 'eventData'
-        payload = {
-            "action": "save_event",
-            "eventData": request.get("eventData")
-        }
-        
-        # Submit to Sheets via existing utility
-        resp = await submit_to_sheets_async(payload)
+    result = await repo.run(repo.save_event, request.get("eventData") or {})
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("message", "Failed to save event"))
+    return result
 
-        if resp and resp.status_code == 200:
-            # A new event must show up on the next page load, not after the TTL.
-            cache.invalidate(KEY_EVENTS)
-            try:
-                sheet_res = resp.json()
-                return {"success": True, **sheet_res}
-            except:
-                return {"success": True, "message": "Event saved"}
-        else:
-            raise Exception("Failed to save to Google Sheets via Apps Script")
-
-    except Exception as e:
-        logger.error(f"Save Event Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/submit-lead")
 async def submit_lead(request: dict):
-    try:
-        # Request contains 'leadData'
-        payload = {
-            "action": "save_lead",
-            "leadData": request.get("leadData")
-        }
+    """Legacy alias — the QR form now posts to /submit-visitor-and-get-contact."""
+    result = await repo.run(repo.save_visitor, request.get("leadData") or {})
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("message", "Failed to save lead"))
+    return {"success": True, "message": "Lead submitted successfully"}
 
-        resp = await submit_to_sheets_async(payload)
-
-        if resp and resp.status_code == 200:
-            invalidate_row_data()
-            return {"success": True, "message": "Lead submitted successfully"}
-        else:
-            raise Exception("Failed to save lead to Google Sheets")
-
-    except Exception as e:
-        logger.error(f"Submit Lead Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/get-event-data")
 async def get_event_specific_data(request: dict):
-    event_id = request.get("eventId")
-    event_name = request.get("eventName")
+    return await repo.run(
+        repo.get_event_specific_data,
+        request.get("eventId") or "",
+        request.get("eventName") or "",
+    )
 
-    async def fetch():
-        resp = await submit_to_sheets_async({
-            "action": "get_event_data",
-            "eventId": event_id,
-            "eventName": event_name,
-        })
-        data = sheets_json(resp)
-        if data is not None:
-            return data
-        return {"success": False, "message": "Failed to fetch event data"}
-
-    try:
-        return await cache.get_or_fetch(
-            key_event_data(event_id, event_name), fetch, should_cache=is_successful
-        )
-    except Exception as e:
-        logger.error(f"Get Event Data Error: {e}")
-        return {"success": False, "message": str(e)}
 
 @app.post("/read-sheet")
 async def read_sheet(request: dict):
-    """Cached read of a whole sheet tab, used by the Leads Database page.
+    """Whole-table read for the Leads Database page.
 
-    That page previously called Apps Script straight from the browser with a 10s
-    timeout, so it got no caching and timed out constantly (Apps Script often
-    needs 12-40s). Routing it through here gives it the shared cache and a
-    server-side timeout that matches reality.
+    Still named 'sheet' because the frontend calls it that; it reads Turso.
     """
-    sheet_name = (request.get("sheetName") or "").strip()
-    if not sheet_name:
-        return {"success": False, "message": "sheetName is required"}
+    return await repo.run(repo.read_table, request.get("sheetName") or "")
 
-    # Guard against typos silently returning an empty table: getSheetByName is
-    # case-sensitive, so 'Event AI Card' finds nothing while 'Event Ai Card' works.
-    KNOWN_SHEETS = {
-        "event ai card": "Event Ai Card",
-        "visitor details": "Visitor Details",
-        "ai card": "Ai Card",
-        "event details": "Event Details",
-        "company profile": "Company Profile",
-    }
-    canonical = KNOWN_SHEETS.get(sheet_name.lower())
-    if canonical and canonical != sheet_name:
-        logger.info("Sheet name '%s' corrected to '%s'", sheet_name, canonical)
-        sheet_name = canonical
-
-    async def fetch():
-        resp = await submit_to_sheets_async({"action": "read", "sheetName": sheet_name})
-        data = sheets_json(resp)
-        if data is not None:
-            return data
-        return {"success": False, "message": f"Failed to read sheet '{sheet_name}'"}
-
-    try:
-        return await cache.get_or_fetch(key_sheet(sheet_name), fetch, should_cache=is_successful)
-    except Exception as e:
-        logger.error(f"Read Sheet Error ({sheet_name}): {e}")
-        return {"success": False, "message": str(e)}
 
 @app.get("/get-company-profile")
 async def get_company_profile():
-    async def fetch():
-        resp = await submit_to_sheets_async({"action": "get_company_profile"})
-        data = sheets_json(resp)
-        if data is not None:
-            return data
-        return {"success": False, "message": "Failed to fetch profile"}
+    return await repo.run(repo.get_company_profile)
 
-    try:
-        return await cache.get_or_fetch(KEY_COMPANY_PROFILE, fetch, should_cache=is_successful)
-    except Exception as e:
-        logger.error(f"Get Company Profile Error: {e}")
-        return {"success": False, "message": str(e)}
 
 @app.post("/save-company-profile")
 async def save_company_profile(request: dict):
-    try:
-        payload = {
-            "action": "save_company_profile",
-            "profileData": request.get("profileData")
-        }
-        resp = await submit_to_sheets_async(payload)
-        if resp and resp.status_code == 200:
-            cache.invalidate(KEY_COMPANY_PROFILE)
-            return resp.json()
-        return {"success": False, "message": "Failed to save profile"}
-    except Exception as e:
-        logger.error(f"Save Company Profile Error: {e}")
-        return {"success": False, "message": str(e)}
+    return await repo.run(repo.save_company_profile, request.get("profileData") or {})
+
 
 @app.post("/submit-visitor-and-get-contact")
 async def submit_visitor_and_get_contact(request: dict):
-    try:
-        payload = {
-            "action": "save_visitor_and_get_contact",
-            "visitorData": request
-        }
-        resp = await submit_to_sheets_async(payload)
-        if resp and resp.status_code == 200:
-            # A new visitor changes the per-event card/visitor lists.
-            invalidate_row_data()
-            return resp.json()
-        return {"success": False, "message": "Failed to process visitor data"}
-    except Exception as e:
-        logger.error(f"Submit Visitor Error: {e}")
-        return {"success": False, "message": str(e)}
+    return await repo.run(repo.save_visitor, request)
+
 
 @app.post("/api/event/delete/{event_id}")
 async def delete_event(event_id: str):
-    try:
-        payload = {
-            "action": "delete_event",
-            "eventId": event_id
-        }
-        resp = await submit_to_sheets_async(payload)
-        if resp and resp.status_code == 200:
-            # Deleting an event removes its cards and visitors too, so clear the
-            # list, that event's own entry, and every per-event data key.
-            cache.invalidate(KEY_EVENTS, key_event(event_id))
-            invalidate_row_data()
-            return resp.json()
-        return {"success": False, "message": "Failed to delete event"}
-    except Exception as e:
-        logger.error(f"Delete Event Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    result = await repo.run(repo.delete_event, event_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("message", "Failed to delete event"))
+    return result
+
 
 @app.post("/api/visitor/update/{visitor_id}")
 async def update_visitor(visitor_id: str, request: dict):
-    try:
-        payload = {
-            "action": "update_visitor",
-            "visitorId": visitor_id,
-            "visitorData": request
-        }
-        resp = await submit_to_sheets_async(payload)
-        if resp and resp.status_code == 200:
-            invalidate_row_data()
-            return resp.json()
-        return {"success": False, "message": "Failed to update visitor"}
-    except Exception as e:
-        logger.error(f"Update Visitor Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    row_id = _row_id(visitor_id)
+    if row_id is None:
+        raise HTTPException(status_code=400, detail=f"Invalid visitor id '{visitor_id}'")
+    return await repo.run(repo.update_visitor, row_id, request)
+
 
 @app.post("/api/card/update/{card_id}")
 async def update_card(card_id: str, request: dict):
-    try:
-        payload = {
-            "action": "update_card",
-            "cardId": card_id,
-            "cardData": request
-        }
-        resp = await submit_to_sheets_async(payload)
-        if resp and resp.status_code == 200:
-            invalidate_row_data()
-            return resp.json()
-        return {"success": False, "message": "Failed to update card"}
-    except Exception as e:
-        logger.error(f"Update Card Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    row_id = _row_id(card_id)
+    if row_id is None:
+        raise HTTPException(status_code=400, detail=f"Invalid card id '{card_id}'")
+    return await repo.run(repo.update_card, row_id, request)
+
 
 @app.get("/proxy-image")
 async def proxy_image(url: str):
@@ -421,4 +296,3 @@ if __name__ == "__main__":
     print("🚀 TARGET SERVER STARTING - V2.0.0 (NEW_UPDATE) 🚀")
     print("SERVICING SCANNER FROM: " + SCANNER_DIST)
     print("="*80 + "\n")
-    uvicorn.run(app, host="127.0.0.1", port=8000)

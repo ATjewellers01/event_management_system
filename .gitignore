@@ -8,6 +8,11 @@
 *.pem
 *.key
 
+# Google service-account keys (Drive uploads) — never commit these
+*service-account*.json
+drive-service-account.json
+credentials.json
+
 # ========================
 # Python
 # ========================

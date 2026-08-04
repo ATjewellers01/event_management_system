@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home | Event Hub</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+    <link rel="icon" type="image/png" href="/assets/apple-touch-icon.png">
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-    <link rel="shortcut icon" href="/assets/favicon.ico">
     <script>
         // Suppress Tailwind CDN warning in development
         if (typeof window !== 'undefined') {
@@ -999,10 +997,14 @@
                 const list = kind === 'card' ? dbCurrentCards : dbCurrentVisitors;
                 const row = list[idx];
                 if (!row) return;
+                // Address the row by its database id. The old positional index
+                // silently edited the wrong row whenever rows were added or removed.
+                const rowId = row._id;
+                if (rowId == null) { toastMe('Cannot save tag: row has no id', '#ef4444'); return; }
                 const endpoint = kind === 'card' ? '/api/card/update' : '/api/visitor/update';
                 const payload = kind === 'card' ? { 'Tag': tagValue } : { tag: tagValue };
                 try {
-                    const r = await fetch(`${endpoint}/${idx}_${Date.now()}`, {
+                    const r = await fetch(`${endpoint}/${rowId}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -1211,7 +1213,7 @@
                                     <td style="padding:15px; font-size:12px; color:#64748b;">${card['Location'] || 'N/A'}</td>
                                     <td style="padding:15px; font-size:12px;">${buildTagCell('card', idx, card['Tag'])}</td>
                                     <td style="padding:15px; text-align:center;">
-                                        <button onclick="openEditCardModal('${idx}', ${JSON.stringify(card).replace(/"/g, '&quot;')})" style="padding:6px 12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">Edit</button>
+                                        <button onclick="openEditCardModal('${card._id}', ${JSON.stringify(card).replace(/"/g, '&quot;')})" style="padding:6px 12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">Edit</button>
                                     </td>
                                 </tr>
                             `;
@@ -1242,7 +1244,7 @@
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Source'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px;">${buildTagCell('visitor', idx, v['Tag'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; text-align:center;">
-                                        <button onclick="openEditVisitorModal('${idx}', ${JSON.stringify(v).replace(/"/g, '&quot;')})" style="padding:6px 12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">Edit</button>
+                                        <button onclick="openEditVisitorModal('${v._id}', ${JSON.stringify(v).replace(/"/g, '&quot;')})" style="padding:6px 12px;background:#2563eb;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;">Edit</button>
                                     </td>
                                 </tr>
                             `;
@@ -2193,7 +2195,7 @@
             btn.disabled = true;
 
             try {
-                const r = await fetch(`/api/visitor/update/${rowIndex}_${Date.now()}`, {
+                const r = await fetch(`/api/visitor/update/${rowIndex}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -2267,7 +2269,7 @@
             btn.disabled = true;
 
             try {
-                const r = await fetch(`/api/card/update/${rowIndex}_${Date.now()}`, {
+                const r = await fetch(`/api/card/update/${rowIndex}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)

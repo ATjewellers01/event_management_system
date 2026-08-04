@@ -10,6 +10,7 @@ returns None and callers fall back to Sheets rather than erroring.
 """
 
 import asyncio
+import threading
 from typing import Optional
 
 from backend.core.config import (
@@ -162,10 +163,13 @@ SCHEMA_STATEMENTS = [
 
 
 def get_connection():
-    """Open a Turso connection, or return None if unavailable.
+    """Open a NEW Turso connection, or return None if unavailable.
 
-    Never raises — a Turso problem must not be able to take down the app while
-    Sheets is still the source of truth.
+    Prefer `with_connection()` in request paths — the handshake costs ~115ms, so
+    opening one per call dominates query time (measured: 500-1000ms per call
+    versus 120-200ms when the connection is reused).
+
+    Never raises: a Turso problem should surface as a handled error, not a crash.
     """
     if not TURSO_ENABLED:
         return None
@@ -177,6 +181,48 @@ def get_connection():
     except Exception as e:
         logger.error("Turso connection failed: %s: %s", type(e).__name__, e)
         return None
+
+
+# A single shared connection, reused across requests to skip the handshake.
+# Safe because request handlers commit immediately: a connection only gets
+# dropped by the server ("stream not found") if it idles while holding an OPEN
+# transaction, which is what broke the migration script. Verified to survive a
+# 40s idle gap with no transaction open.
+_shared_conn = None
+_conn_lock = threading.Lock()
+
+
+def with_connection(fn):
+    """Run fn(conn) on the shared connection, reconnecting once if it went stale.
+
+    Serialised with a lock: libsql connections are not documented as
+    thread-safe, and handlers run in worker threads via asyncio.to_thread.
+    """
+    global _shared_conn
+
+    if not TURSO_ENABLED:
+        raise RuntimeError("Turso is not configured (need TURSO_DB_URL and TURSO_AUTH_TOKEN)")
+
+    with _conn_lock:
+        for attempt in (1, 2):
+            if _shared_conn is None:
+                _shared_conn = get_connection()
+                if _shared_conn is None:
+                    raise RuntimeError("Could not open a Turso connection")
+            try:
+                return fn(_shared_conn)
+            except Exception as e:
+                # A dropped stream is recoverable; reconnect and retry once.
+                stale = "stream not found" in str(e).lower() or "hrana" in str(e).lower()
+                if attempt == 1 and stale:
+                    logger.warning("Turso connection went stale — reconnecting: %s", e)
+                    try:
+                        _shared_conn.close()
+                    except Exception:
+                        pass
+                    _shared_conn = None
+                    continue
+                raise
 
 
 def init_schema(conn=None) -> bool:
