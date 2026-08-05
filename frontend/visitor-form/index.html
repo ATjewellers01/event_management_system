@@ -105,6 +105,15 @@
                 </div>
                 
                 <div class="p-6 pt-14">
+                    <!-- Registration confirmation -->
+                    <div class="flex items-start gap-3 mb-5 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                        <svg class="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <div>
+                            <p class="font-black text-emerald-900 text-[15px] leading-tight">Thank you for registering!</p>
+                            <p id="thanksEvent" class="text-emerald-700 text-[13px] font-medium mt-0.5 leading-snug"></p>
+                        </div>
+                    </div>
+
                     <h2 id="orgCompany" class="text-2xl font-black text-gray-900 mb-1 leading-tight">--</h2>
                     <p id="orgTagline" class="text-gray-500 font-medium text-sm mb-4 leading-relaxed line-clamp-2">--</p>
                     
@@ -161,19 +170,12 @@
                          <a id="linkIg" href="#" target="_blank" class="w-10 h-10 rounded-full bg-[#FCE6F1] text-[#E4405F] flex items-center justify-center hidden hover:scale-110 transition-transform"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
                     </div>
                     
-                    <!-- Key Person -->
-                    <div id="keyPersonBox" class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-4 mb-8 hidden">
-                        <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl uppercase shadow-inner" id="kpInitial"></div>
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Key Contact</p>
-                            <p id="kpName" class="font-bold text-gray-900 leading-tight"></p>
-                        </div>
-                    </div>
-
-                    <button onclick="downloadContact()" class="btn-primary flex items-center justify-center gap-3">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Save Contact
-                    </button>
+                    <!-- Visit the site -->
+                    <a id="visitSiteBtn" href="#" target="_blank" rel="noopener"
+                       class="btn-primary flex items-center justify-center gap-3 hidden no-underline">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                        Visit Our Website
+                    </a>
                 </div>
             </div>
         </div>
@@ -192,6 +194,7 @@
         const pathParts = window.location.pathname.split('/');
         const eventId = pathParts[pathParts.length - 1];
         let eventDataCache = null;
+        let currentEventName = '';
 
         // Pincode -> City/State autofill via api.postalpincode.in (free, no key).
         // City/State stay editable always — a miss or network failure just
@@ -253,6 +256,7 @@
                 const resData = await r.json();
                 if (resData.success && resData.data) {
                     const evName = resData.data['Event Name'];
+                    currentEventName = evName || '';
                     document.getElementById('eventName').innerText = `Thank you for visiting ${evName}!`;
                     document.getElementById('eventSubtitle').innerText = "Please share your details to connect.";
                 } else {
@@ -294,6 +298,10 @@
 
             console.log('Submitting visitor data:', payload);
 
+            // Tracks whether the server confirmed the write, so a later rendering
+            // error is never reported to the visitor as a failed submission.
+            let saved = false;
+
             try {
                 // Submit Visitor Data & Fetch Event Contact Info in one call
                 const response = await fetch('/submit-visitor-and-get-contact', {
@@ -305,7 +313,8 @@
                 const res = await response.json();
                 
                 if (res.success && res.contactInfo) {
-                    eventDataCache = res.contactInfo; // Store for VCard generation
+                    saved = true;
+                    eventDataCache = res.contactInfo;
                     
                     // Populate Digital Business Card View
                     const c = res.contactInfo;
@@ -345,16 +354,25 @@
                     if (c.instagram) { document.getElementById('linkIg').href = c.instagram; document.getElementById('linkIg').classList.remove('hidden'); hasSocial = true; }
                     if (hasSocial) document.getElementById('socialLinks').classList.remove('hidden');
                     
-                    if (c.name) {
-                        document.getElementById('kpName').innerText = c.name;
-                        document.getElementById('kpInitial').innerText = c.name.charAt(0);
-                        document.getElementById('keyPersonBox').classList.remove('hidden');
+                    // Confirmation line, naming the event where we know it.
+                    const evLabel = (eventDataCache && eventDataCache.eventName) || currentEventName;
+                    document.getElementById('thanksEvent').innerText = evLabel
+                        ? `Your details have been recorded for ${evLabel}.`
+                        : 'Your details have been recorded.';
+
+                    // Website button — uses whatever the Company Profile holds, so the
+                    // link can be changed there without touching this page.
+                    if (c.website) {
+                        const site = c.website.startsWith('http') ? c.website : 'https://' + c.website;
+                        const btn = document.getElementById('visitSiteBtn');
+                        btn.href = site;
+                        btn.classList.remove('hidden');
                     }
-                    
+
                     // Swap Views
                     document.getElementById('formView').style.display = 'none';
                     if (document.getElementById('formHeader')) document.getElementById('formHeader').style.display = 'none';
-                    
+
                     // Scroll to top upon success
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                     document.getElementById('resultView').style.display = 'block';
@@ -362,61 +380,25 @@
                     alert(res.message || 'Failed to submit details. Please try again.');
                 }
             } catch (err) {
-                alert('Network error while submitting. Please check your connection.');
                 console.error(err);
+                // `saved` is set the moment the server confirms the write. If we get
+                // here after that, the save succeeded and something in the rendering
+                // below it threw — reporting that as a network error is wrong and
+                // makes people submit again, creating duplicates.
+                if (saved) {
+                    alert('Your details were saved successfully. (The confirmation screen could not be displayed.)');
+                } else {
+                    // Surface the real reason: on a phone there is no console to read,
+                    // and "network error" hides genuine causes like a blocked request
+                    // or a JSON parse failure.
+                    alert('Could not submit.\n\n' + (err && err.name ? err.name + ': ' : '') +
+                          (err && err.message ? err.message : String(err)));
+                }
             } finally {
                 btn.disabled = false;
                 loader.classList.remove('active');
             }
         });
-
-        function downloadContact() {
-            if (!eventDataCache) {
-                console.error("No contact data found in cache");
-                return;
-            }
-            
-            const vC = (val) => (val || '').toString().replace(/\n/g, ' ').trim();
-            const contactName = eventDataCache.name || 'Event Contact';
-            
-            // Name Split logic
-            const nameParts = contactName.split(' ');
-            let firstName = contactName;
-            let lastName = '';
-            if (nameParts.length > 1) {
-                lastName = nameParts.pop();
-                firstName = nameParts.join(' ');
-            }
-
-            const vCard = [
-                'BEGIN:VCARD',
-                'VERSION:3.0',
-                `N:${vC(lastName)};${vC(firstName)};;;`,
-                `FN:${vC(contactName)}`,
-                `ORG:${vC(eventDataCache.company || '')}`,
-                `TITLE:${vC(eventDataCache.tagline || '')}`,
-                `TEL;TYPE=WORK,VOICE:${vC(eventDataCache.phone || '')}`,
-                `TEL;TYPE=CELL,VOICE:${vC(eventDataCache.whatsapp || eventDataCache.phone || '')}`,
-                `EMAIL;TYPE=WORK,INTERNET:${vC(eventDataCache.email || '')}`,
-                `ADR;TYPE=WORK:;;${vC(eventDataCache.address || '')};${vC(eventDataCache.city || '')};${vC(eventDataCache.state || '')};${vC(eventDataCache.pincode || '')};${vC(eventDataCache.country || '')}`,
-                `URL:${vC(eventDataCache.website || '')}`,
-                'END:VCARD'
-            ].join('\r\n');
-
-            const blob = new Blob([vCard], { type: 'text/vcard;charset=utf-8' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `${contactName.replace(/\s+/g, '_')}_Contact.vcf`;
-            document.body.appendChild(a);
-            a.click();
-            
-            setTimeout(() => {
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }, 100);
-        }
     </script>
 </body>
 </html>

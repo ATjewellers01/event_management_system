@@ -7,7 +7,11 @@ from openai import AsyncOpenAI
 # process happens to be started from inside backend/, which silently breaks
 # scripts and tooling run from the repo root.
 _ENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
-load_dotenv(_ENV_PATH, override=True)
+# override=False so a real environment variable wins over the file. That is the
+# conventional precedence and it lets a value be overridden for a single run
+# (e.g. PUBLIC_BASE_URL=<tunnel> when testing the QR flow from a phone) without
+# editing .env.
+load_dotenv(_ENV_PATH, override=False)
 
 # API Keys
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
