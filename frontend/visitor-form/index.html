@@ -94,17 +94,39 @@
 
             <!-- Scan a business card to fill the form instead of typing it -->
             <div class="mt-6 pt-6 border-t border-gray-200">
-                <p class="text-center text-xs text-gray-400 font-semibold uppercase tracking-widest mb-3">Short on time?</p>
-                <button type="button" id="scanCardBtn"
-                        class="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-2xl border-2 border-blue-200 bg-blue-50 text-blue-700 font-bold hover:bg-blue-100 transition-colors">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    Scan Business Card
-                </button>
-                <p class="text-center text-[11px] text-gray-400 mt-2 leading-snug">
-                    We'll read your card and fill the form — you can edit anything before submitting.
+                <p class="text-center text-xs text-gray-400 font-semibold uppercase tracking-widest mb-1">Short on time?</p>
+                <p class="text-center text-[11px] text-gray-400 mb-4 leading-snug">
+                    Photograph your card and we'll fill the form — you can edit anything before submitting.
                 </p>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- Front -->
+                    <div>
+                        <button type="button" id="frontBtn" data-side="front"
+                                class="card-slot w-full aspect-[1.6/1] flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50 text-blue-700 font-bold hover:bg-blue-100 transition-colors overflow-hidden relative">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span class="text-[12px] leading-none">Front <span class="text-red-500">*</span></span>
+                        </button>
+                    </div>
+                    <!-- Back (optional) -->
+                    <div>
+                        <button type="button" id="backBtn" data-side="back"
+                                class="card-slot w-full aspect-[1.6/1] flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 text-gray-500 font-bold hover:bg-gray-100 transition-colors overflow-hidden relative">
+                            <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span class="text-[12px] leading-none">Back <span class="font-medium opacity-70">(optional)</span></span>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="button" id="readCardBtn" disabled
+                        class="w-full mt-3 flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    Read Card &amp; Fill Form
+                </button>
+
                 <!-- capture prompts the camera on a phone, and still allows a file on desktop -->
-                <input type="file" id="cardFileInput" accept="image/*" capture="environment" class="hidden">
+                <input type="file" id="frontFileInput" accept="image/*" capture="environment" class="hidden">
+                <input type="file" id="backFileInput" accept="image/*" capture="environment" class="hidden">
                 <p id="scanStatus" class="text-center text-[12px] font-semibold mt-3 hidden"></p>
             </div>
         </div>
@@ -303,32 +325,77 @@
         }
 
         function wireCardScan() {
-            const btn = document.getElementById('scanCardBtn');
-            const input = document.getElementById('cardFileInput');
             const status = document.getElementById('scanStatus');
-            if (!btn || !input) return;
+            const readBtn = document.getElementById('readCardBtn');
+            if (!readBtn) return;
+
+            // Scaled data URLs for each side, held until the visitor taps Read.
+            const captured = { front: null, back: null };
 
             const say = (msg, cls) => {
                 status.textContent = msg;
                 status.className = 'text-center text-[12px] font-semibold mt-3 ' + cls;
             };
 
-            btn.addEventListener('click', () => input.click());
+            // Show the captured photo in the slot so the visitor can see whether it
+            // is readable — and retake it by tapping again — before spending a scan.
+            function showThumb(side, dataUrl, label) {
+                const slot = document.getElementById(side + 'Btn');
+                slot.innerHTML =
+                    '<img src="' + dataUrl + '" alt="" class="absolute inset-0 w-full h-full object-cover">' +
+                    '<span class="absolute inset-0 bg-black/35"></span>' +
+                    '<span class="relative text-white text-[11px] font-bold drop-shadow">' + label + ' ✓</span>' +
+                    '<span class="relative text-white/80 text-[9px] font-semibold drop-shadow">tap to retake</span>';
+                slot.classList.remove('border-dashed');
+                slot.classList.add('border-solid', 'border-blue-500');
+            }
 
-            input.addEventListener('change', async () => {
-                const file = input.files && input.files[0];
-                if (!file) return;
+            function wireSlot(side, label) {
+                const btn = document.getElementById(side + 'Btn');
+                const input = document.getElementById(side + 'FileInput');
+                if (!btn || !input) return;
 
-                btn.disabled = true;
-                btn.classList.add('opacity-60');
+                btn.addEventListener('click', () => input.click());
+
+                input.addEventListener('change', async () => {
+                    const file = input.files && input.files[0];
+                    // Reset immediately so retaking the same file still fires 'change'.
+                    input.value = '';
+                    if (!file) return;
+                    try {
+                        captured[side] = await fileToScaledDataUrl(file);
+                        showThumb(side, captured[side], label);
+                        // Front is what the reader needs; back alone is not enough.
+                        readBtn.disabled = !captured.front;
+                        say(captured.front
+                            ? (captured.back ? 'Front and back ready — tap Read Card.' : 'Front ready — add the back, or tap Read Card.')
+                            : 'Add the front of the card to continue.', 'text-blue-600');
+                    } catch (err) {
+                        console.error(err);
+                        say('That photo could not be used — please try again.', 'text-amber-600');
+                    }
+                });
+            }
+
+            wireSlot('front', 'Front');
+            wireSlot('back', 'Back');
+
+            readBtn.addEventListener('click', async () => {
+                if (!captured.front) return;
+
+                readBtn.disabled = true;
                 say('Reading your card…', 'text-blue-600');
 
                 try {
-                    const dataUrl = await fileToScaledDataUrl(file);
+                    const body = { base64Image1: captured.front };
+                    // Only send the back when there is one; the endpoint treats it as
+                    // optional and a null would just be extra payload.
+                    if (captured.back) body.base64Image2 = captured.back;
+
                     const res = await fetch('/ocr-extract', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ base64Image1: dataUrl })
+                        body: JSON.stringify(body)
                     });
                     const out = await res.json();
                     const d = (out && out.data) || {};
@@ -355,6 +422,7 @@
 
                     if (n) {
                         say('Card read — please check the details and edit anything that looks wrong.', 'text-emerald-600');
+                        document.getElementById('v_mobile').scrollIntoView({ behavior: 'smooth', block: 'center' });
                     } else {
                         say('Nothing new found on that card — please fill the form manually.', 'text-amber-600');
                     }
@@ -362,10 +430,7 @@
                     console.error(err);
                     say('Could not read that card — please fill the form manually.', 'text-amber-600');
                 } finally {
-                    // Reset so picking the same file again still fires 'change'.
-                    input.value = '';
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-60');
+                    readBtn.disabled = !captured.front;
                 }
             });
         }
