@@ -133,6 +133,30 @@ async def perform_ocr(request: OCRRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/ocr-extract")
+async def ocr_extract(request: OCRRequest):
+    """Read a card and return the fields, without writing anything.
+
+    The visitor form uses this to prefill itself from a business card. It
+    deliberately differs from /ocr in two ways:
+
+      * No DB write. /ocr saves an event_cards row; doing that here would
+        create a card row *and* a visitor row for the same person.
+      * No enrichment. The waterfall does company research (web search, LLM
+        synthesis) which costs money, adds tens of seconds, and produces
+        nothing the visitor form asks for. Someone standing at a booth wants
+        their name and number filled in, not an industry classification.
+
+    Failure is non-fatal: the caller falls back to typing the form by hand.
+    """
+    try:
+        data = await extract_card_data(request.base64Image1, request.base64Image2)
+        return {"success": True, "data": data}
+    except Exception as e:
+        logger.error("OCR extract failed: %s", e)
+        return {"success": False, "message": "Could not read the card.", "data": {}}
+
+
 @app.get("/get-events")
 async def get_events_list():
     return await repo.run(repo.get_event_list)

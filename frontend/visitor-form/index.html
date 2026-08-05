@@ -57,30 +57,30 @@
         <div id="formView" class="glass-card p-6 md:p-8 form-view animate-fade-in">
             <form id="visitorForm" class="space-y-5">
                 <div>
-                    <label class="input-label">Company Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="v_company" class="input-field" required>
-                </div>
-                <div>
-                    <label class="input-label">Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="v_name" class="input-field" required>
-                </div>
-                <div>
                     <label class="input-label">Mobile No. <span class="text-red-500">*</span></label>
                     <input type="tel" id="v_mobile" class="input-field" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="Enter a 10-digit mobile number" required>
                 </div>
                 <div>
-                    <label class="input-label">Pincode <span class="text-red-500">*</span></label>
-                    <input type="text" id="v_pincode" class="input-field" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" title="Enter a 6-digit pincode" required>
+                    <label class="input-label">Company Name</label>
+                    <input type="text" id="v_company" class="input-field">
+                </div>
+                <div>
+                    <label class="input-label">Customer Name</label>
+                    <input type="text" id="v_name" class="input-field">
+                </div>
+                <div>
+                    <label class="input-label">Pincode</label>
+                    <input type="text" id="v_pincode" class="input-field" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" title="Enter a 6-digit pincode">
                     <p id="v_pincode_status" class="text-xs text-gray-400 mt-1"></p>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="input-label">State <span class="text-red-500">*</span></label>
-                        <input type="text" id="v_state" class="input-field" required>
+                        <label class="input-label">State</label>
+                        <input type="text" id="v_state" class="input-field">
                     </div>
                     <div>
-                        <label class="input-label">City <span class="text-red-500">*</span></label>
-                        <input type="text" id="v_city" class="input-field" required>
+                        <label class="input-label">City</label>
+                        <input type="text" id="v_city" class="input-field">
                     </div>
                 </div>
                 <div>
@@ -91,6 +91,22 @@
                     <button type="submit" id="submitBtn" class="btn-primary">Submit Details</button>
                 </div>
             </form>
+
+            <!-- Scan a business card to fill the form instead of typing it -->
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <p class="text-center text-xs text-gray-400 font-semibold uppercase tracking-widest mb-3">Short on time?</p>
+                <button type="button" id="scanCardBtn"
+                        class="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-2xl border-2 border-blue-200 bg-blue-50 text-blue-700 font-bold hover:bg-blue-100 transition-colors">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Scan Business Card
+                </button>
+                <p class="text-center text-[11px] text-gray-400 mt-2 leading-snug">
+                    We'll read your card and fill the form — you can edit anything before submitting.
+                </p>
+                <!-- capture prompts the camera on a phone, and still allows a file on desktop -->
+                <input type="file" id="cardFileInput" accept="image/*" capture="environment" class="hidden">
+                <p id="scanStatus" class="text-center text-[12px] font-semibold mt-3 hidden"></p>
+            </div>
         </div>
 
         <!-- SUCCESS & CONTACT VIEW -->
@@ -199,6 +215,161 @@
             });
         }
 
+        // --- Scan a business card to prefill the form ---------------------------
+
+        // Phone cameras produce 4-8MB JPEGs. Full resolution buys the OCR nothing
+        // beyond ~1600px on the long edge and makes the upload painfully slow on
+        // booth wifi, so downscale before sending.
+        function fileToScaledDataUrl(file, maxEdge = 1600) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error('Could not read the image file.'));
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onerror = () => reject(new Error('That file is not a readable image.'));
+                    img.onload = () => {
+                        const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
+                        const w = Math.round(img.width * scale);
+                        const h = Math.round(img.height * scale);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        // JPEG, not WebP: gpt-4o vision accepts it everywhere and
+                        // Safari's WebP encoder support is patchy on older iOS.
+                        resolve(canvas.toDataURL('image/jpeg', 0.85));
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Only fill blanks — never clobber something the visitor already typed.
+        function fillIfEmpty(id, value) {
+            if (!value) return false;
+            const el = document.getElementById(id);
+            if (!el || el.value.trim()) return false;
+            el.value = String(value).trim();
+            return true;
+        }
+
+        // Cards usually list several numbers in one string ("+91 98765 43210,
+        // 0731-2456789"). Split on the separators first and test each candidate on
+        // its own — stripping every non-digit and scanning the joined result finds
+        // a 10-digit run that straddles two different numbers, which yields a
+        // plausible-looking but completely wrong mobile.
+        function pickMobile(phoneStr) {
+            if (!phoneStr) return '';
+            for (const partRaw of String(phoneStr).split(/[,;/|]| or /i)) {
+                // A "Tel"/"Ph"/"Off"/"Fax" label means this segment is a landline.
+                // Skipping it beats trying to rescue digits from it: an Indore
+                // landline (0731-2456789) becomes 7312456789 once the leading 0 is
+                // dropped, which passes any 10-digit mobile test and would be saved
+                // as a mobile number that cannot be called.
+                if (/\b(tel|ph|phone|off|office|fax|landline)\b/i.test(partRaw)) continue;
+
+                let dg = partRaw.replace(/[^\d]/g, '');
+
+                // Strip a +91 country code, which is unambiguous at these lengths.
+                if (dg.length === 12 && dg.startsWith('91')) dg = dg.slice(2);
+                else if (dg.length === 13 && dg.startsWith('091')) dg = dg.slice(3);
+                else if (dg.length === 11 && dg.startsWith('0')) dg = dg.slice(1);
+
+                // Indian mobiles are exactly 10 digits starting 6-9. An unlabelled
+                // landline written bare (0731-2456789 -> 11 digits) still slips
+                // through here, so the visitor is told to check the details; mobile
+                // is the one field they are certain to look at.
+                if (/^[6-9]\d{9}$/.test(dg)) return dg;
+            }
+            return '';
+        }
+
+        // The card gives a free-text "location" ("Indore, Madhya Pradesh") rather
+        // than separate fields, and carries no pincode at all. Split on the last
+        // comma: the tail is the state, the head the city.
+        function applyCardLocation(location) {
+            if (!location) return false;
+            const parts = String(location).split(',').map(s => s.trim()).filter(Boolean);
+            if (!parts.length) return false;
+            let filled = false;
+            if (parts.length === 1) {
+                filled = fillIfEmpty('v_city', parts[0]) || filled;
+            } else {
+                filled = fillIfEmpty('v_state', parts[parts.length - 1]) || filled;
+                filled = fillIfEmpty('v_city', parts.slice(0, -1).join(', ')) || filled;
+            }
+            return filled;
+        }
+
+        function wireCardScan() {
+            const btn = document.getElementById('scanCardBtn');
+            const input = document.getElementById('cardFileInput');
+            const status = document.getElementById('scanStatus');
+            if (!btn || !input) return;
+
+            const say = (msg, cls) => {
+                status.textContent = msg;
+                status.className = 'text-center text-[12px] font-semibold mt-3 ' + cls;
+            };
+
+            btn.addEventListener('click', () => input.click());
+
+            input.addEventListener('change', async () => {
+                const file = input.files && input.files[0];
+                if (!file) return;
+
+                btn.disabled = true;
+                btn.classList.add('opacity-60');
+                say('Reading your card…', 'text-blue-600');
+
+                try {
+                    const dataUrl = await fileToScaledDataUrl(file);
+                    const res = await fetch('/ocr-extract', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ base64Image1: dataUrl })
+                    });
+                    const out = await res.json();
+                    const d = (out && out.data) || {};
+
+                    if (!out.success) {
+                        say('Could not read that card — please fill the form manually.', 'text-amber-600');
+                        return;
+                    }
+
+                    // The OCR returns "Not Found" for misses; treat that as empty.
+                    const clean = (v) => {
+                        const s = (v == null ? '' : String(v)).trim();
+                        return (!s || /^not found$/i.test(s)) ? '' : s;
+                    };
+
+                    let n = 0;
+                    if (fillIfEmpty('v_company', clean(d.company))) n++;
+                    if (fillIfEmpty('v_name', clean(d.name))) n++;
+                    if (fillIfEmpty('v_address', clean(d.address))) n++;
+                    if (applyCardLocation(clean(d.location))) n++;
+
+                    const mob = pickMobile(clean(d.phone));
+                    if (mob && fillIfEmpty('v_mobile', mob)) n++;
+
+                    if (n) {
+                        say('Card read — please check the details and edit anything that looks wrong.', 'text-emerald-600');
+                    } else {
+                        say('Nothing new found on that card — please fill the form manually.', 'text-amber-600');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    say('Could not read that card — please fill the form manually.', 'text-amber-600');
+                } finally {
+                    // Reset so picking the same file again still fires 'change'.
+                    input.value = '';
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-60');
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             console.log("EventID from URL:", eventId);
             if (!eventId || eventId === 'visitor-form') {
@@ -208,6 +379,7 @@
             }
 
             wirePincodeAutofill('v_pincode', 'v_city', 'v_state', 'v_pincode_status');
+            wireCardScan();
 
             // Fetch the event name to change the intro text
             try {
@@ -232,6 +404,15 @@
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             const loader = document.getElementById('loader');
+
+            // Mobile is the only required field, so it is the one thing worth
+            // checking before we show the loader.
+            const mobile = document.getElementById('v_mobile').value.trim();
+            if (!/^\d{10}$/.test(mobile)) {
+                alert('Please enter a 10-digit mobile number.');
+                document.getElementById('v_mobile').focus();
+                return;
+            }
 
             btn.disabled = true;
             loader.classList.add('active');
