@@ -112,7 +112,9 @@ SCHEMA_STATEMENTS = [
         source        TEXT DEFAULT '',
         tag           TEXT DEFAULT '',
         created_at    TEXT DEFAULT '',
-        source_row    INTEGER
+        source_row    INTEGER,
+        card_photo1   TEXT DEFAULT '',
+        card_photo2   TEXT DEFAULT ''
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_visitors_event ON visitors(event_id)",
@@ -229,6 +231,27 @@ def with_connection(fn):
                 raise
 
 
+# Columns added after the tables were first created. CREATE TABLE IF NOT EXISTS
+# silently does nothing on an existing table, so new columns need an explicit
+# ALTER; SQLite has no ADD COLUMN IF NOT EXISTS, hence the table_info check.
+ADDED_COLUMNS = [
+    ("visitors", "card_photo1", "TEXT DEFAULT ''"),
+    ("visitors", "card_photo2", "TEXT DEFAULT ''"),
+]
+
+
+def _apply_added_columns(conn) -> None:
+    for table, column, decl in ADDED_COLUMNS:
+        try:
+            existing = {r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            if column not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+                logger.info("Added column %s.%s", table, column)
+        except Exception as e:
+            # A missing column degrades one feature; it must not stop startup.
+            logger.error("Could not add %s.%s: %s", table, column, e)
+
+
 def init_schema(conn=None) -> bool:
     """Create tables and indexes if they don't exist. Returns True on success."""
     own_conn = conn is None
@@ -239,6 +262,7 @@ def init_schema(conn=None) -> bool:
     try:
         for stmt in SCHEMA_STATEMENTS:
             conn.execute(stmt)
+        _apply_added_columns(conn)
         conn.commit()
         logger.info("Turso schema ready (%d statements).", len(SCHEMA_STATEMENTS))
         return True

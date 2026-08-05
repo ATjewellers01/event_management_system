@@ -364,8 +364,9 @@ def save_visitor(visitor_data: dict) -> dict:
         conn.execute(
             """INSERT INTO visitors (
                  event_id,event_name,company_name,customer_name,whatsapp_no,mobile_no,
-                 groups,pincode,state,city,address,source,tag,created_at
-               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                 groups,pincode,state,city,address,source,tag,created_at,
+                 card_photo1,card_photo2
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (event_id, event_name,
              visitor_data.get("companyName") or "",
              visitor_data.get("customerName") or visitor_data.get("visitorName") or "",
@@ -378,7 +379,11 @@ def save_visitor(visitor_data: dict) -> dict:
              visitor_data.get("address") or "",
              visitor_data.get("source") or "QR",
              visitor_data.get("tag") or "",
-             _now()),
+             _now(),
+             # Set when the visitor attached a card photo. A number with no other
+             # detail is only useful if the card that carries the rest is kept.
+             visitor_data.get("cardPhoto1") or "",
+             visitor_data.get("cardPhoto2") or ""),
         )
         conn.commit()
         return {

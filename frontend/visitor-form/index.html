@@ -94,9 +94,11 @@
 
             <!-- Scan a business card to fill the form instead of typing it -->
             <div class="mt-6 pt-6 border-t border-gray-200">
-                <p class="text-center text-xs text-gray-400 font-semibold uppercase tracking-widest mb-1">Short on time?</p>
-                <p class="text-center text-[11px] text-gray-400 mb-4 leading-snug">
-                    Photograph your card and we'll fill the form — you can edit anything before submitting.
+                <p class="text-center text-xs text-gray-400 font-semibold uppercase tracking-widest mb-1">
+                    Business Card <span id="cardReqLabel" class="text-red-500">*</span>
+                </p>
+                <p id="cardReqHint" class="text-center text-[11px] text-gray-500 mb-4 leading-snug">
+                    Attach your card, or fill in the details above instead.
                 </p>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -324,13 +326,50 @@
             return filled;
         }
 
+        // Scaled data URLs for each side. Module scope because both the card block
+        // and the submit handler need them: the images are sent with the form.
+        const captured = { front: null, back: null };
+
+        // The detail fields. A lead needs more than a bare phone number to be worth
+        // anything, so the form demands either these or a card photo.
+        const DETAIL_FIELDS = ['v_company', 'v_name', 'v_pincode', 'v_city', 'v_state', 'v_address'];
+
+        function hasTypedDetails() {
+            return DETAIL_FIELDS.some(id => {
+                const el = document.getElementById(id);
+                return el && el.value.trim();
+            });
+        }
+
+        // Card is required only while no details have been typed; once any detail is
+        // filled it becomes optional, and vice versa. Keeps the asterisk, the hint
+        // and the submit gate showing the same rule.
+        function refreshCardRequirement() {
+            const detailsGiven = hasTypedDetails();
+            const cardGiven = !!captured.front;
+            const star = document.getElementById('cardReqLabel');
+            const hint = document.getElementById('cardReqHint');
+            if (!star || !hint) return;
+
+            if (detailsGiven) {
+                star.classList.add('hidden');
+                hint.textContent = cardGiven
+                    ? 'Card attached — it will be saved with your details.'
+                    : 'Optional — you have filled in your details.';
+                hint.className = 'text-center text-[11px] text-gray-400 mb-4 leading-snug';
+            } else {
+                star.classList.remove('hidden');
+                hint.textContent = cardGiven
+                    ? 'Card attached. Tap Read Card to fill the form, or just submit.'
+                    : 'Required unless you fill in the details above.';
+                hint.className = 'text-center text-[11px] text-gray-500 mb-4 leading-snug';
+            }
+        }
+
         function wireCardScan() {
             const status = document.getElementById('scanStatus');
             const readBtn = document.getElementById('readCardBtn');
             if (!readBtn) return;
-
-            // Scaled data URLs for each side, held until the visitor taps Read.
-            const captured = { front: null, back: null };
 
             const say = (msg, cls) => {
                 status.textContent = msg;
@@ -367,6 +406,7 @@
                         showThumb(side, captured[side], label);
                         // Front is what the reader needs; back alone is not enough.
                         readBtn.disabled = !captured.front;
+                        refreshCardRequirement();
                         say(captured.front
                             ? (captured.back ? 'Front and back ready — tap Read Card.' : 'Front ready — add the back, or tap Read Card.')
                             : 'Add the front of the card to continue.', 'text-blue-600');
@@ -422,6 +462,7 @@
 
                     if (n) {
                         say('Card read — please check the details and edit anything that looks wrong.', 'text-emerald-600');
+                        refreshCardRequirement();
                         document.getElementById('v_mobile').scrollIntoView({ behavior: 'smooth', block: 'center' });
                     } else {
                         say('Nothing new found on that card — please fill the form manually.', 'text-amber-600');
@@ -445,6 +486,13 @@
 
             wirePincodeAutofill('v_pincode', 'v_city', 'v_state', 'v_pincode_status');
             wireCardScan();
+
+            // Keep the card's required/optional state in step with what is typed.
+            DETAIL_FIELDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', refreshCardRequirement);
+            });
+            refreshCardRequirement();
 
             // Fetch the event name to change the intro text
             try {
@@ -479,6 +527,15 @@
                 return;
             }
 
+            // A mobile number on its own is not a usable lead. Accept it only when
+            // something identifies the person: either typed details, or a card
+            // photo we keep so the details can be read off it later.
+            if (!hasTypedDetails() && !captured.front) {
+                alert('Please either fill in your details, or attach a photo of your business card.');
+                document.getElementById('frontBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             btn.disabled = true;
             loader.classList.add('active');
 
@@ -500,6 +557,14 @@
                 address: document.getElementById('v_address').value,
                 mobileNo: document.getElementById('v_mobile').value
             };
+
+            // Send any card photo along with the details. When the visitor gave
+            // only a number, this image is the sole record of who they are, so it
+            // has to be stored rather than just read.
+            if (captured.front) {
+                payload.cardImage1 = captured.front;
+                if (captured.back) payload.cardImage2 = captured.back;
+            }
 
             console.log('Submitting visitor data:', payload);
 

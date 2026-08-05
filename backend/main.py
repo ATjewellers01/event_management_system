@@ -214,6 +214,19 @@ async def save_company_profile(request: dict):
 
 @app.post("/submit-visitor-and-get-contact")
 async def submit_visitor_and_get_contact(request: dict):
+    # A visitor who gives only a mobile number must attach their card, so the
+    # card image is the only record of who they are — upload it before the row is
+    # written and store the URLs rather than the base64, which would bloat the DB.
+    front = request.pop("cardImage1", "") or ""
+    back = request.pop("cardImage2", "") or ""
+    if front:
+        url1, url2 = await images.upload_card_images_async(
+            front, back, request.get("eventId") or ""
+        )
+        # Upload failure must not lose the lead; the row still saves without URLs.
+        request["cardPhoto1"] = url1 or ""
+        request["cardPhoto2"] = url2 or ""
+
     return await repo.run(repo.save_visitor, request)
 
 
