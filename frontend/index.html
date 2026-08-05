@@ -365,6 +365,7 @@
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">State</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">City</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Address</th>
+                            <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Card</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Source</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9;">Tag</th>
                             <th style="padding: 15px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #f1f5f9; text-align: center;">Actions</th>
@@ -1132,7 +1133,7 @@
                     headers = [
                         'Timestamp', 'Event ID', 'Event Name', 'Company Name', 'Customer Name',
                         'WhatsApp No.', 'Groups', 'Pincode', 'State', 'City', 'Address',
-                        'Mobile No.', 'Source', 'Tag'
+                        'Mobile No.', 'Source', 'Tag', 'Card Photo 1', 'Card Photo 2'
                     ];
                     rows = dbCurrentVisitors.map(v => {
                         const out = {};
@@ -1245,6 +1246,14 @@
                             const phoneCell = (mobile || whatsapp)
                                 ? `${visitorCell(mobile)}${whatsapp ? `<br><span style="font-size:11px; opacity:0.7;">WA: ${whatsapp}</span>` : ''}`
                                 : '--';
+                            // Card photos, for visitors who attached one instead of
+                            // typing their details. Same icon links as Scanned Cards.
+                            const photoIcon = (url, label, extra) => url
+                                ? `<a href="${url}" target="_blank" title="${label}" style="color:#2563eb;${extra || ''}"><svg style="width:16px;height:16px;display:inline;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2"></path></svg></a>`
+                                : '';
+                            const vImg1 = photoIcon(v['Card Photo 1'], 'Front', 'margin-right:8px;');
+                            const vImg2 = photoIcon(v['Card Photo 2'], 'Back', '');
+                            const cardCell = (vImg1 + vImg2) || '--';
                             const row = `
                                 <tr style="white-space:nowrap;">
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; font-weight:600; color:#1e293b;">${visitorCell(v['Customer Name'])}</td>
@@ -1255,6 +1264,7 @@
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['State'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['City'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b; max-width:240px; overflow:hidden; text-overflow:ellipsis;">${visitorCell(v['Address'])}</td>
+                                    <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#94a3b8; white-space:nowrap;">${cardCell}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px; color:#64748b;">${visitorCell(v['Source'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; font-size:13px;">${buildTagCell('visitor', idx, v['Tag'])}</td>
                                     <td style="padding:15px; border-bottom:1px solid #f1f5f9; text-align:center;">

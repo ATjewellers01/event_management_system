@@ -191,6 +191,7 @@ VISITOR_COLUMNS = [
     ("whatsapp_no", "WhatsApp No."), ("mobile_no", "Mobile No."),
     ("groups", "Groups"), ("pincode", "Pincode"), ("state", "State"),
     ("city", "City"), ("address", "Address"), ("source", "Source"), ("tag", "Tag"),
+    ("card_photo1", "Card Photo 1"), ("card_photo2", "Card Photo 2"),
 ]
 
 
