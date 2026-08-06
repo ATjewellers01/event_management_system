@@ -292,27 +292,43 @@ if os.path.exists(SCANNER_DIST):
 else:
     logger.warning(f"Scanner Dist directory not found at {SCANNER_DIST}")
 
+# These pages carry their own JS inline, so a cached copy keeps running old
+# application code after a deploy — which looked exactly like the deploy having
+# silently failed. No cache headers were sent at all, so browsers applied their
+# own heuristic and held the stale HTML. The pages are a few KB and Turso answers
+# in milliseconds, so always revalidating costs nothing worth measuring.
+_NO_CACHE = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
+
 @app.get("/")
 async def read_index():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"), headers=_NO_CACHE)
 
 @app.get("/leads.html")
 @app.get("/leads")
 async def read_leads():
-    return FileResponse(os.path.join(FRONTEND_DIR, "leads.html"))
+    return FileResponse(os.path.join(FRONTEND_DIR, "leads.html"), headers=_NO_CACHE)
 
 @app.get("/visitor-form/{event_id}")
 async def serve_visitor_form(event_id: str):
-    return FileResponse(os.path.join(FRONTEND_DIR, "visitor-form", "index.html"))
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "visitor-form", "index.html"), headers=_NO_CACHE
+    )
 
 # Map individual files for root level access if needed by the index.html
 @app.get("/style.css")
 async def read_style():
-    return FileResponse(os.path.join(FRONTEND_DIR, "style.css"))
+    return FileResponse(os.path.join(FRONTEND_DIR, "style.css"), headers=_NO_CACHE)
 
 @app.get("/worker.js")
 async def read_worker():
-    return FileResponse(os.path.join(FRONTEND_DIR, "worker.js"))
+    # Same reasoning as the HTML pages: this is application code, and a stale
+    # copy means the card scanner runs against an older API contract.
+    return FileResponse(os.path.join(FRONTEND_DIR, "worker.js"), headers=_NO_CACHE)
 
 @app.get("/vcard-direct")
 async def vcard_direct(name: str, org: str, phone: str, email: str, title: str = "", addr: str = "", web: str = "", first: str = "", last: str = ""):
