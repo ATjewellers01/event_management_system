@@ -13,10 +13,9 @@ _ENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 # editing .env.
 load_dotenv(_ENV_PATH, override=False)
 
-# API Keys
+# API Keys. GOOGLE_API_KEY / GOOGLE_CSE_ID are gone with the enrichment
+# waterfall — nothing searches the web any more.
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
 # Public-facing deployment URL — used to build links the browser/QR points to.
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")

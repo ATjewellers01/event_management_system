@@ -3,5 +3,11 @@
 **/__pycache__
 **/*.pyc
 **/.env
+**/.env.*
 node_modules
 BotivateScanner/node_modules
+
+# Local development artefacts — these were being copied into the image.
+**/*.log
+.venv
+**/.DS_Store

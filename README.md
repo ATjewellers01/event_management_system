@@ -2,7 +2,7 @@
 
 Lead capture for jewellery trade shows. Staff scan business cards or enter
 visitors by hand; visitors can also self-register by scanning a QR code at the
-stand. Cards are read with OCR and enriched from the web.
+stand. Cards are read with OCR.
 
 Built for JewelFactory (AT Jewellers) by Botivate.
 
@@ -11,7 +11,8 @@ Built for JewelFactory (AT Jewellers) by Botivate.
 ```
 Browser ──► FastAPI (backend/) ──► Turso        (all data)
                               ├──► Cloudinary   (card images, WebP)
-                              └──► OpenAI       (OCR + enrichment)
+                              └──► OpenAI       (card OCR)
+                              └──► Groq         (transliteration)
 ```
 
 - **Turso (libSQL)** is the only data store: events, team members, scanned
@@ -31,14 +32,16 @@ been removed. They were the cause of 3-40 second page loads and intermittent
 1. **OCR** — GPT-4o vision reads both sides of the card. Output is forced to
    English/Latin script; Indic-script names are transliterated rather than
    translated, so `श्री जिनकुशल ज्वेलर्स` becomes `Shri Jinkushal Jewellers`.
-2. **Enrichment** — resolves the company website (email domain → card URL →
-   Google CSE), scrapes it via Jina Reader, extracts social links by regex, and
-   looks up registration data on ZaubaCorp/Tofler.
-3. **Store** — images to Cloudinary, structured row to Turso, with a
-   0-100 confidence score.
+2. **Store** — images to Cloudinary as WebP, row to Turso.
 
-Both prompts define every field explicitly and pin card-derived fields against
-web-search overwrite, because a loose prompt put values in the wrong columns.
+There is no enrichment step. It resolved the company website, scraped it and
+looked up registration data, but every field it produced (industry, website,
+trust score, key people, social media) was dropped when the tables moved to one
+shared layout — so it was spending three Google searches and an LLM call per
+scan on data nothing reads. Removing it took a scan from 20-60s to about 8s.
+
+The OCR prompt defines every field explicitly, because a loose prompt put
+values in the wrong columns.
 
 ## Pages
 
@@ -81,12 +84,15 @@ Production runs on AWS EC2 (`ap-south-1`, same region as the Turso database)
 behind nginx, in a Docker container built from the `Dockerfile`.
 
 ```bash
-cd /home/ubuntu/app && git pull origin main
-docker build -t eventhub-app:new .
+cd /home/ubuntu/app && git pull origin <branch>
+docker build -t eventhub-app:<tag> .
 docker stop event-hub && docker rm event-hub
 docker run -d --name event-hub --restart unless-stopped \
-  -p 127.0.0.1:8000:8000 --env-file /home/ubuntu/app/backend/.env eventhub-app:new
+  -p 127.0.0.1:8000:8000 --env-file /home/ubuntu/app/backend/.env eventhub-app:<tag>
 ```
+
+Keep the previous image tagged so a bad deploy can be rolled back by re-running
+the last command against it.
 
 nginx proxies `event.zold.in` to `127.0.0.1:8000`, so that port mapping must stay
 as above. The instance is registered with AWS SSM, so these steps can also be run

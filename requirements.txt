@@ -1,10 +1,9 @@
 fastapi
 uvicorn
 httpx
-requests
-python-multipart
 python-dotenv
 openai
-watchfiles
 libsql
 cloudinary
+# Used only by run.py's reload=True during local development.
+watchfiles

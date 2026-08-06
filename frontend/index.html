@@ -922,11 +922,6 @@
                 if (!value) return true;
                 return /^\d{6}$/.test(value);
             }
-            function validateEmailIfPresent(value) {
-                if (!value) return true;
-                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-            }
-
             // Pincode -> City/State autofill via api.postalpincode.in (free, no key).
             // City/State stay editable always — a miss or network failure just
             // falls back to manual entry, it never blocks the form.
