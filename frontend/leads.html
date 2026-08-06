@@ -368,20 +368,24 @@
         }
         // -------------------
 
-        const LEADS_COL_KEYS = [
-            ['S No.'], ['Event ID'], ['Event Name'], ['Event Start Date'], ['Event End Date'],
-            ['Card Photo 1'], ['Card Photo 2'], ['Company Name'], ['Industry'], 
-            ['Person Name'], ['Designation'], ['Phone'], ['Email'], ['Website'], 
-            ['Social Media'], ['Address'], ['Services'], ['Company Size'], ['Founded Year'], 
-            ['Registration Status'], ['Trust Score'], ['Key People (Founder/CEO)'], ['Is Validated'], 
-            ['Source Link'], ['About Company'], ['Location']
+        // Cards and visitors share one column set, so the two tabs read the same
+        // way and an export from either lines up. Each entry is [displayName,
+        // ...fallback keys] — 'Mobile Number' reads the API's 'Mobile No.'.
+        const SHARED_COL_KEYS = [
+            ['S No.'],
+            ['Company Name'],
+            ['Customer Name', 'Person Name'],
+            ['City'], ['State'], ['Pincode'],
+            ['Mobile Number', 'Mobile No.', 'Phone'],
+            ['WhatsApp Number', 'WhatsApp No.'],
+            ['Work Phone'],
+            ['Card Photo 1'], ['Card Photo 2'],
+            ['Group', 'Groups'],
+            ['Tag'],
         ];
 
-        const EVENTS_COL_KEYS = [
-            ['S No.'], ['Event ID'], ['Event Name'], ['Company Name'], ['Customer Name'],
-            ['Mobile No.'], ['WhatsApp No.'], ['Groups'], ['Sub-Group'], ['State'], ['City'],
-            ['Address'], ['GST No.'], ['PAN No.'], ['Source']
-        ];
+        const LEADS_COL_KEYS = SHARED_COL_KEYS;
+        const EVENTS_COL_KEYS = SHARED_COL_KEYS;
 
         let currentTab = 'leads'; // or 'events'
         let originalData = []; // Store full data for filtering

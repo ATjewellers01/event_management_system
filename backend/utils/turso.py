@@ -57,35 +57,28 @@ SCHEMA_STATEMENTS = [
     """,
     "CREATE INDEX IF NOT EXISTS idx_event_members_event ON event_members(event_id)",
 
-    # --- Scanned business cards (from the "Event Ai Card" sheet) ---
+    # --- Scanned business cards ---
+    # Cards and visitors deliberately carry the SAME business columns, because
+    # Customer Data and the Leads database show both through one shared layout.
+    # A capture path only fills what it can see (a card has no pincode, a QR form
+    # has no designation); the rest is filled in later via Edit or an edited
+    # export. "groups" is quoted throughout — it is a reserved word.
     """
     CREATE TABLE IF NOT EXISTS event_cards (
         id                  INTEGER PRIMARY KEY AUTOINCREMENT,
         event_id            TEXT DEFAULT '',
         event_name          TEXT DEFAULT '',
-        event_start_date    TEXT DEFAULT '',
-        event_end_date      TEXT DEFAULT '',
+        company_name        TEXT DEFAULT '',
+        customer_name       TEXT DEFAULT '',
+        city                TEXT DEFAULT '',
+        state               TEXT DEFAULT '',
+        pincode             TEXT DEFAULT '',
+        mobile_no           TEXT DEFAULT '',
+        whatsapp_no         TEXT DEFAULT '',
+        work_phone          TEXT DEFAULT '',
         card_photo_1        TEXT DEFAULT '',
         card_photo_2        TEXT DEFAULT '',
-        company_name        TEXT DEFAULT '',
-        industry            TEXT DEFAULT '',
-        person_name         TEXT DEFAULT '',
-        designation         TEXT DEFAULT '',
-        phone               TEXT DEFAULT '',
-        email               TEXT DEFAULT '',
-        website             TEXT DEFAULT '',
-        social_media        TEXT DEFAULT '',
-        address             TEXT DEFAULT '',
-        services            TEXT DEFAULT '',
-        company_size        TEXT DEFAULT '',
-        founded_year        TEXT DEFAULT '',
-        registration_status TEXT DEFAULT '',
-        trust_score         TEXT DEFAULT '',
-        key_people          TEXT DEFAULT '',
-        is_validated        TEXT DEFAULT '',
-        source_link         TEXT DEFAULT '',
-        about_company       TEXT DEFAULT '',
-        location            TEXT DEFAULT '',
+        "groups"            TEXT DEFAULT '',
         tag                 TEXT DEFAULT '',
         created_at          TEXT DEFAULT '',
         source_row          INTEGER
@@ -94,7 +87,7 @@ SCHEMA_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS idx_event_cards_event ON event_cards(event_id)",
     "CREATE INDEX IF NOT EXISTS idx_event_cards_company ON event_cards(company_name)",
 
-    # --- Visitors (from the "Visitor Details" sheet) ---
+    # --- Visitors (QR form and manual entry) ---
     """
     CREATE TABLE IF NOT EXISTS visitors (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,19 +95,20 @@ SCHEMA_STATEMENTS = [
         event_name    TEXT DEFAULT '',
         company_name  TEXT DEFAULT '',
         customer_name TEXT DEFAULT '',
-        whatsapp_no   TEXT DEFAULT '',
-        mobile_no     TEXT DEFAULT '',
-        groups        TEXT DEFAULT '',
-        pincode       TEXT DEFAULT '',
-        state         TEXT DEFAULT '',
         city          TEXT DEFAULT '',
+        state         TEXT DEFAULT '',
+        pincode       TEXT DEFAULT '',
+        mobile_no     TEXT DEFAULT '',
+        whatsapp_no   TEXT DEFAULT '',
+        work_phone    TEXT DEFAULT '',
+        card_photo1   TEXT DEFAULT '',
+        card_photo2   TEXT DEFAULT '',
+        "groups"      TEXT DEFAULT '',
+        tag           TEXT DEFAULT '',
         address       TEXT DEFAULT '',
         source        TEXT DEFAULT '',
-        tag           TEXT DEFAULT '',
         created_at    TEXT DEFAULT '',
-        source_row    INTEGER,
-        card_photo1   TEXT DEFAULT '',
-        card_photo2   TEXT DEFAULT ''
+        source_row    INTEGER
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_visitors_event ON visitors(event_id)",
@@ -235,17 +229,22 @@ def with_connection(fn):
 # silently does nothing on an existing table, so new columns need an explicit
 # ALTER; SQLite has no ADD COLUMN IF NOT EXISTS, hence the table_info check.
 ADDED_COLUMNS = [
-    ("visitors", "card_photo1", "TEXT DEFAULT ''"),
-    ("visitors", "card_photo2", "TEXT DEFAULT ''"),
+    # Empty: the base schema above now declares every column. Entries here are
+    # only for columns added to a table that already exists in the wild.
 ]
 
 
 def _apply_added_columns(conn) -> None:
     for table, column, decl in ADDED_COLUMNS:
         try:
-            existing = {r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
-            if column not in existing:
-                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+            # Compare case-insensitively: SQLite identifiers are case-insensitive,
+            # and a reserved word like "groups" can come back from PRAGMA with
+            # different casing than it was declared with. A case-sensitive check
+            # would re-issue the ALTER on every startup and log an error each time.
+            existing = {r[1].lower() for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            if column.lower() not in existing:
+                # Quote the name — "groups" is a reserved word.
+                conn.execute(f'ALTER TABLE {table} ADD COLUMN "{column}" {decl}')
                 logger.info("Added column %s.%s", table, column)
         except Exception as e:
             # A missing column degrades one feature; it must not stop startup.

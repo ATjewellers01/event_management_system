@@ -22,7 +22,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.core.config import logger, FRONTEND_DIR, PUBLIC_BASE_URL
 from backend.core.models import OCRRequest
 from backend.services.ocr_service import extract_card_data
-from backend.services.enrichment_service import run_waterfall_enrichment
 from backend.utils import repository as repo
 from backend.utils import images
 from backend.services import llm_client
@@ -85,29 +84,16 @@ def _row_id(raw: str):
 @app.post("/ocr")
 async def perform_ocr(request: OCRRequest):
     try:
-        # 1. OCR
-        ocr_data = await extract_card_data(request.base64Image1, request.base64Image2)
-
-        # 2. Enrichment
-        final_data = await run_waterfall_enrichment(ocr_data)
-
-        # 3. Stats & Score
-        confidence_score = 0
-        if final_data.get("is_validated"):
-            confidence_score += 30
-        if final_data.get("website"):
-            confidence_score += 20
-        try:
-            trust_val = int(str(final_data.get("trust_score", "0")).split('/')[0].strip())
-            confidence_score += (trust_val * 2)
-        except Exception:
-            pass
-        if final_data.get("social_media"):
-            confidence_score += 10
+        # 1. OCR. The enrichment waterfall used to run here, but every field it
+        # produced — industry, website, trust score, key people, social media —
+        # is a column the tables no longer carry. It cost three Google CSE calls
+        # and a synthesis LLM call per scan (~$0.02 and most of the latency) to
+        # fill data nothing reads, so the scan is now OCR straight to storage.
+        final_data = await extract_card_data(request.base64Image1, request.base64Image2)
 
         event_info = request.eventInfo or {}
 
-        # 4. Store the images (optimised WebP) and the row.
+        # 2. Store the images (optimised WebP) and the row.
         photo1_url, photo2_url = await images.upload_card_images_async(
             request.base64Image1, request.base64Image2 or "", event_info.get("id") or ""
         )
@@ -125,7 +111,6 @@ async def perform_ocr(request: OCRRequest):
             "message": "Card saved." if saved else f"Card scanned but saving failed: {result.get('message')}",
             "imagesStored": bool(photo1_url or photo2_url),
             "data": final_data,
-            "confidence_score": confidence_score,
         }
 
     except Exception as e:
@@ -228,6 +213,28 @@ async def submit_visitor_and_get_contact(request: dict):
         request["cardPhoto2"] = url2 or ""
 
     return await repo.run(repo.save_visitor, request)
+
+
+@app.post("/api/card/delete/{row_id}")
+async def delete_card(row_id: str):
+    rid = _row_id(row_id)
+    if rid is None:
+        raise HTTPException(status_code=400, detail="Invalid card id")
+    result = await repo.run(repo.delete_card, rid)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message", "Failed to delete card"))
+    return result
+
+
+@app.post("/api/visitor/delete/{row_id}")
+async def delete_visitor(row_id: str):
+    rid = _row_id(row_id)
+    if rid is None:
+        raise HTTPException(status_code=400, detail="Invalid visitor id")
+    result = await repo.run(repo.delete_visitor, rid)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message", "Failed to delete visitor"))
+    return result
 
 
 @app.post("/api/event/delete/{event_id}")

@@ -168,30 +168,55 @@ def delete_event(event_id: str) -> dict:
     return _guard("delete_event", op)
 
 
+def _delete_row(table: str, label: str, row_id) -> dict:
+    """Delete one row by primary key. Shared by the card and visitor deletes."""
+    if row_id is None:
+        return {"success": False, "message": f"No {label} id provided"}
+
+    def op(conn):
+        existing = conn.execute(
+            f"SELECT COUNT(*) FROM {table} WHERE id = ?", (row_id,)
+        ).fetchall()
+        if not existing or not existing[0][0]:
+            # Already gone. Report it rather than a bare success, so a double
+            # click on Delete does not read as having removed a second row.
+            return {"success": False, "message": f"That {label} no longer exists."}
+        conn.execute(f"DELETE FROM {table} WHERE id = ?", (row_id,))
+        conn.commit()
+        return {"success": True, "message": f"{label.capitalize()} deleted"}
+
+    return _guard(f"delete_{label}", op)
+
+
+def delete_card(row_id) -> dict:
+    return _delete_row("event_cards", "card", row_id)
+
+
+def delete_visitor(row_id) -> dict:
+    return _delete_row("visitors", "visitor", row_id)
+
+
 # --- Column maps (db column -> the header key the frontend reads) ------------
 
 CARD_COLUMNS = [
     ("created_at", "Timestamp"), ("event_id", "Event ID"), ("event_name", "Event Name"),
-    ("event_start_date", "Event Start Date"), ("event_end_date", "Event End Date"),
+    ("company_name", "Company Name"), ("customer_name", "Customer Name"),
+    ("city", "City"), ("state", "State"), ("pincode", "Pincode"),
+    ("mobile_no", "Mobile No."), ("whatsapp_no", "WhatsApp No."),
+    ("work_phone", "Work Phone"),
     ("card_photo_1", "Card Photo 1"), ("card_photo_2", "Card Photo 2"),
-    ("company_name", "Company Name"), ("industry", "Industry"),
-    ("person_name", "Person Name"), ("designation", "Designation"),
-    ("phone", "Phone"), ("email", "Email"), ("website", "Website"),
-    ("social_media", "Social Media"), ("address", "Address"), ("services", "Services"),
-    ("company_size", "Company Size"), ("founded_year", "Founded Year"),
-    ("registration_status", "Registration Status"), ("trust_score", "Trust Score"),
-    ("key_people", "People (Founders)"), ("is_validated", "Is Validated"),
-    ("source_link", "Source Link"), ("about_company", "About Company"),
-    ("location", "Location"), ("tag", "Tag"),
+    ("groups", "Groups"), ("tag", "Tag"),
 ]
 
 VISITOR_COLUMNS = [
     ("created_at", "Timestamp"), ("event_id", "Event ID"), ("event_name", "Event Name"),
     ("company_name", "Company Name"), ("customer_name", "Customer Name"),
-    ("whatsapp_no", "WhatsApp No."), ("mobile_no", "Mobile No."),
-    ("groups", "Groups"), ("pincode", "Pincode"), ("state", "State"),
-    ("city", "City"), ("address", "Address"), ("source", "Source"), ("tag", "Tag"),
+    ("city", "City"), ("state", "State"), ("pincode", "Pincode"),
+    ("mobile_no", "Mobile No."), ("whatsapp_no", "WhatsApp No."),
+    ("work_phone", "Work Phone"),
     ("card_photo1", "Card Photo 1"), ("card_photo2", "Card Photo 2"),
+    ("groups", "Groups"), ("tag", "Tag"),
+    ("address", "Address"), ("source", "Source"),
 ]
 
 
@@ -201,7 +226,8 @@ def _select(conn, table: str, colmap: list, where: str = "", params: tuple = ())
     Includes the row id as `_id` so updates target a primary key rather than the
     positional row index the Sheets version depended on.
     """
-    cols = ", ".join(c for c, _ in colmap)
+    # Quote every column: "groups" is a reserved word and fails unquoted.
+    cols = ", ".join(f'"{c}"' for c, _ in colmap)
     sql = f"SELECT id, {cols} FROM {table}"
     if where:
         sql += f" WHERE {where}"
@@ -252,28 +278,19 @@ def read_table(name: str) -> dict:
 
 # --- Cards -------------------------------------------------------------------
 
-def _format_key_people(value) -> str:
-    """Flatten [{name, role, contact}] into readable lines.
+def _split_location(location: str) -> tuple:
+    """Split a card's free-text location into (city, state).
 
-    Stringifying the list directly yields '[object Object]'-style noise.
+    Cards print "Raipur, Chhattisgarh" rather than separate fields, and the
+    table now has real city and state columns. The tail is the state, the head
+    the city; a single part is treated as the city.
     """
-    if not value:
-        return ""
-    if isinstance(value, list):
-        parts = []
-        for p in value:
-            if not isinstance(p, dict):
-                parts.append(str(p))
-                continue
-            s = str(p.get("name") or "").strip()
-            if p.get("role") and p["role"] != "Not Found":
-                s += f" ({p['role']})"
-            if p.get("contact") and p["contact"] != "Not Found":
-                s += f" - {p['contact']}"
-            if s:
-                parts.append(s)
-        return "\n".join(parts)
-    return str(value)
+    parts = [p.strip() for p in str(location or "").split(",") if p.strip()]
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return parts[0], ""
+    return ", ".join(parts[:-1]), parts[-1]
 
 
 def save_event_card(extracted: dict, photo1_url: str, photo2_url: str,
@@ -281,31 +298,23 @@ def save_event_card(extracted: dict, photo1_url: str, photo2_url: str,
     d = extracted or {}
     ev = event_info or {}
 
-    # Keep a real False distinguishable from "never checked".
-    validated = d.get("is_validated")
-    validated_str = "true" if validated is True else ("false" if validated is False else "")
+    city, state = _split_location(d.get("location"))
 
     def op(conn):
         conn.execute(
             """INSERT INTO event_cards (
-                 event_id,event_name,event_start_date,event_end_date,
-                 card_photo_1,card_photo_2,company_name,industry,person_name,designation,
-                 phone,email,website,social_media,address,services,company_size,
-                 founded_year,registration_status,trust_score,key_people,is_validated,
-                 source_link,about_company,location,tag,created_at
-               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                 event_id,event_name,company_name,customer_name,city,state,pincode,
+                 mobile_no,whatsapp_no,work_phone,card_photo_1,card_photo_2,
+                 "groups",tag,created_at
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (ev.get("id") or "", ev.get("name") or "",
-             ev.get("startDate") or "", ev.get("endDate") or "",
+             d.get("company") or "", d.get("name") or "",
+             city, state, "",
+             # The card's phone line goes in as-is; a card often prints several
+             # numbers and picking one here would silently drop the others.
+             d.get("phone") or "", "", "",
              photo1_url or "", photo2_url or "",
-             d.get("company") or "", d.get("industry") or "",
-             d.get("name") or "", d.get("title") or "",
-             d.get("phone") or "", d.get("email") or "", d.get("website") or "",
-             d.get("social_media") or "", d.get("address") or "", d.get("services") or "",
-             d.get("company_size") or "", d.get("founded_year") or "",
-             d.get("registration_status") or "", str(d.get("trust_score") or ""),
-             _format_key_people(d.get("key_people")), validated_str,
-             d.get("validation_source") or "", d.get("about_the_company") or "",
-             d.get("location") or "", "", _now()),
+             "", "", _now()),
         )
         conn.commit()
         return {"success": True, "message": "Card saved to Event Hub!"}
@@ -313,12 +322,10 @@ def save_event_card(extracted: dict, photo1_url: str, photo2_url: str,
 
 
 CARD_UPDATE_FIELDS = {
-    "Company Name": "company_name", "Industry": "industry",
-    "Person Name": "person_name", "Designation": "designation",
-    "Phone": "phone", "Email": "email", "Website": "website",
-    "Social Media": "social_media", "Address": "address", "Services": "services",
-    "Company Size": "company_size", "Founded Year": "founded_year",
-    "Location": "location", "About Company": "about_company", "Tag": "tag",
+    "Company Name": "company_name", "Customer Name": "customer_name",
+    "City": "city", "State": "state", "Pincode": "pincode",
+    "Mobile No.": "mobile_no", "WhatsApp No.": "whatsapp_no",
+    "Work Phone": "work_phone", "Groups": "groups", "Tag": "tag",
 }
 
 
@@ -331,7 +338,7 @@ def update_card(row_id: int, card_data: dict) -> dict:
     sets, params = [], []
     for header, column in CARD_UPDATE_FIELDS.items():
         if header in card_data:
-            sets.append(f"{column} = ?")
+            sets.append(f'"{column}" = ?')
             params.append(card_data[header] if card_data[header] is not None else "")
     if not sets:
         return {"success": False, "message": "No updatable fields supplied"}
@@ -400,6 +407,7 @@ VISITOR_UPDATE_FIELDS = {
     "mobileNo": "mobile_no", "whatsappNo": "whatsapp_no",
     "groups": "groups", "pincode": "pincode", "state": "state",
     "city": "city", "address": "address", "tag": "tag",
+    "workPhone": "work_phone",
 }
 
 
@@ -408,7 +416,7 @@ def update_visitor(row_id: int, visitor_data: dict) -> dict:
     sets, params = [], []
     for key, column in VISITOR_UPDATE_FIELDS.items():
         if key in visitor_data:
-            sets.append(f"{column} = ?")
+            sets.append(f'"{column}" = ?')
             params.append(visitor_data[key] if visitor_data[key] is not None else "")
     if not sets:
         return {"success": False, "message": "No updatable fields supplied"}
